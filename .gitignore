@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# 环境与密钥
+.env
+*.key
+
+# 数据库（开发期 SQLite）
+*.db
+*.sqlite3
+
+# Node / 前端
+node_modules/
+dist/
+.vite/
+
+# IDE / 系统
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# 日志与临时文件
+*.log
+tmp/
