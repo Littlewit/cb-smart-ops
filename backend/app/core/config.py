@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     # 开发阶段免装 Redis，Celery 同步执行；部署置 false
     celery_task_always_eager: bool = True
 
-    jwt_secret: str = "change-me"
+    # JWT 签名密钥：默认值仅为本地开发兜底（≥32 字节，满足 HMAC-SHA256 强度要求），
+    # 部署时必须在 .env 中覆盖为随机长密钥
+    jwt_secret: str = "dev-only-secret-change-me-in-production-0123456789"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 24 * 60
 

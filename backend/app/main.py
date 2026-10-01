@@ -3,11 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
-from app.routers import health
+from app.routers import ai, auth, health, inventory, products, shops
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 表结构由 Alembic 迁移管理（backend/alembic/），应用启动不做建表
     yield
 
 
@@ -20,6 +21,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(shops.router)
+    app.include_router(products.router)
+    app.include_router(inventory.router)
+    app.include_router(ai.router)
     return app
 
 
