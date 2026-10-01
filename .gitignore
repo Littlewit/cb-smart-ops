@@ -1,3 +1,6 @@
+# CodeBuddy 项目数据（文档/记忆/规约），仅本地使用，不入库
+.codebuddy/
+
 # Python
 __pycache__/
 *.py[cod]
