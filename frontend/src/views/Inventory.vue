@@ -1,22 +1,44 @@
 <template>
   <div class="page">
-    <!-- 顶部指标卡片（来自 /api/inventory/summary） -->
-    <el-row :gutter="12">
-      <el-col :span="8">
-        <el-card shadow="hover"><el-statistic title="商品总数" :value="summary.total_products" /></el-card>
-      </el-col>
+    <!-- 顶部指标卡片（来自 /api/inventory/summary）：图标芯片 + 大数字 -->
+    <el-row :gutter="16">
       <el-col :span="8">
         <el-card shadow="hover">
-          <el-statistic title="预警商品" :value="summary.alert_count" :value-style="{ color: '#f56c6c' }" />
+          <div class="stat">
+            <div class="stat-icon indigo"><el-icon><Goods /></el-icon></div>
+            <div>
+              <div class="stat-label">商品总数</div>
+              <div class="stat-value">{{ summary.total_products }}</div>
+            </div>
+          </div>
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card shadow="hover"><el-statistic title="店铺数量" :value="summary.total_shops" /></el-card>
+        <el-card shadow="hover">
+          <div class="stat">
+            <div class="stat-icon ruby"><el-icon><Warning /></el-icon></div>
+            <div>
+              <div class="stat-label">预警商品</div>
+              <div class="stat-value ruby">{{ summary.alert_count }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <div class="stat">
+            <div class="stat-icon navy"><el-icon><Shop /></el-icon></div>
+            <div>
+              <div class="stat-label">店铺数量</div>
+              <div class="stat-value">{{ summary.total_shops }}</div>
+            </div>
+          </div>
+        </el-card>
       </el-col>
     </el-row>
 
     <!-- 预警商品列表：红色高亮 + 操作入口 -->
-    <h4 style="margin: 16px 0 8px">库存预警商品（点击行查看流水）</h4>
+    <h4 class="section-title">库存预警商品（点击行查看流水）</h4>
     <el-table :data="summary.alert_products" :row-class-name="() => 'alert-row'" @row-click="openLogs">
       <el-table-column prop="sku" label="SKU" width="140" />
       <el-table-column prop="name" label="名称" min-width="160" />

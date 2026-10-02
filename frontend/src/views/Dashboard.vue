@@ -1,15 +1,55 @@
 <template>
   <div class="page">
-    <!-- 顶部指标卡片 -->
-    <el-row :gutter="12">
-      <el-col :span="6"><el-card shadow="hover"><el-statistic title="商品总数" :value="stats.total_products" /></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><el-statistic title="预警商品" :value="stats.alert_count" :value-style="{ color: '#f56c6c' }" /></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><el-statistic title="店铺数量" :value="stats.total_shops" /></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><el-statistic title="近7天销售额" :value="totalSales" :precision="2" prefix="￥" /></el-card></el-col>
+    <!-- 顶部指标卡片：图标芯片 + 大数字 -->
+    <el-row :gutter="16">
+      <el-col :span="6">
+        <el-card shadow="hover">
+          <div class="stat">
+            <div class="stat-icon indigo"><el-icon><Goods /></el-icon></div>
+            <div>
+              <div class="stat-label">商品总数</div>
+              <div class="stat-value">{{ stats.total_products }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover">
+          <div class="stat">
+            <div class="stat-icon ruby"><el-icon><Warning /></el-icon></div>
+            <div>
+              <div class="stat-label">预警商品</div>
+              <div class="stat-value ruby">{{ stats.alert_count }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover">
+          <div class="stat">
+            <div class="stat-icon navy"><el-icon><Shop /></el-icon></div>
+            <div>
+              <div class="stat-label">店铺数量</div>
+              <div class="stat-value">{{ stats.total_shops }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover">
+          <div class="stat">
+            <div class="stat-icon green"><el-icon><TrendCharts /></el-icon></div>
+            <div>
+              <div class="stat-label">近 7 天销售额</div>
+              <div class="stat-value">￥{{ totalSales.toFixed(2) }}</div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
     </el-row>
 
     <!-- 图表区：左折线（销售趋势）右饼图（店铺分布） -->
-    <el-row :gutter="12" style="margin-top: 12px">
+    <el-row :gutter="16" style="margin-top: 16px">
       <el-col :span="14"><el-card shadow="hover"><div ref="trendRef" class="chart" /></el-card></el-col>
       <el-col :span="10"><el-card shadow="hover"><div ref="pieRef" class="chart" /></el-card></el-col>
     </el-row>

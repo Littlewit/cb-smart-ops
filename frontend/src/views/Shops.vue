@@ -1,20 +1,26 @@
 <template>
   <div class="page">
-    <!-- admin 才显示新增按钮 -->
-    <el-button type="primary" v-if="isAdmin" @click="dialogVisible = true">新增店铺</el-button>
+    <!-- 工具栏：admin 才显示新增按钮（右对齐） -->
+    <div class="toolbar">
+      <div class="toolbar-spacer"></div>
+      <el-button type="primary" v-if="isAdmin" @click="dialogVisible = true">
+        <el-icon><Plus /></el-icon>新增店铺
+      </el-button>
+    </div>
 
-    <el-table :data="shops" v-loading="loading" style="margin-top: 12px">
+    <el-table :data="shops" v-loading="loading">
       <el-table-column prop="platform" label="平台" width="120">
         <template #default="{ row }">
-          <el-tag>{{ platformLabel(row.platform) }}</el-tag>
+          <el-tag :type="platformTagType(row.platform)" effect="plain">{{ platformLabel(row.platform) }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="name" label="店铺名" />
-      <el-table-column label="连接状态" width="120">
+      <el-table-column label="连接状态" width="140">
         <template #default="{ row }">
-          <el-tag :type="row.status === 'connected' || row.status === 'active' ? 'success' : 'info'">
-            {{ row.status === 'connected' ? '已连接' : row.status === 'active' ? '可用' : '断开' }}
-          </el-tag>
+          <span class="status-cell">
+            <span class="status-dot" :class="row.status"></span>
+            {{ statusLabel(row.status) }}
+          </span>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="280">
@@ -71,6 +77,19 @@ const form = reactive({ platform: 'mock', name: '', credentials: '' })
 const platformLabel = (p: string): string =>
   ({ mock: 'Mock 演示', shein: 'SHEIN', shopify: 'Shopify' })[p] || p
 
+/** 平台 tag 颜色区分：mock=info / shein=primary / shopify=success */
+const PLATFORM_TAG_TYPES = {
+  mock: 'info',
+  shein: 'primary',
+  shopify: 'success',
+} as const
+const platformTagType = (p: string): 'info' | 'primary' | 'success' =>
+  PLATFORM_TAG_TYPES[p as keyof typeof PLATFORM_TAG_TYPES] ?? 'info'
+
+/** 状态点文字 */
+const statusLabel = (s: string): string =>
+  (s === 'connected' ? '已连接' : s === 'active' ? '可用' : '断开')
+
 async function load(): Promise<void> {
   loading.value = true
   try {
@@ -121,3 +140,17 @@ async function onDelete(row: Shop): Promise<void> {
 
 onMounted(load)
 </script>
+
+<style scoped>
+/* 连接状态：小圆点 + 文字（比 tag 更轻量） */
+.status-cell { display: inline-flex; align-items: center; gap: 6px; color: var(--s-ink-secondary); }
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.connected { background: #0e9f6e; box-shadow: 0 0 0 3px rgba(14, 159, 110, 0.15); }
+.status-dot.active    { background: var(--s-primary); box-shadow: 0 0 0 3px rgba(83, 58, 255, 0.15); }
+.status-dot.disconnected { background: var(--s-ruby); box-shadow: 0 0 0 3px rgba(234, 34, 97, 0.15); }
+</style>

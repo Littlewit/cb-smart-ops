@@ -4,7 +4,9 @@
       <!-- 工具栏：搜索 / 预警过滤 / 新增 -->
       <el-form inline>
         <el-form-item label="关键字">
-          <el-input v-model="query.q" placeholder="SKU / 名称搜索" clearable style="width: 220px" @change="load" />
+          <el-input v-model="query.q" placeholder="SKU / 名称搜索" clearable style="width: 220px" @change="load">
+            <template #prefix><el-icon><Search /></el-icon></template>
+          </el-input>
         </el-form-item>
         <el-form-item label="店铺">
           <el-select v-model="query.shop_id" placeholder="全部店铺" clearable style="width: 160px" @change="load">
@@ -18,7 +20,9 @@
           </el-select>
         </el-form-item>
         <el-form-item v-if="canWrite">
-          <el-button type="primary" @click="openCreate">新增商品</el-button>
+          <el-button type="primary" @click="openCreate">
+            <el-icon><Plus /></el-icon>新增商品
+          </el-button>
         </el-form-item>
       </el-form>
   
@@ -26,18 +30,19 @@
       <el-table :data="items" v-loading="loading" :row-class-name="rowClass">
         <el-table-column prop="sku" label="SKU" width="140" />
         <el-table-column prop="name" label="名称" min-width="160" />
-        <el-table-column prop="cost_price" label="成本价" width="90" />
-        <el-table-column prop="sale_price" label="售价" width="90" />
-        <el-table-column prop="stock" label="库存" width="80" />
-        <el-table-column prop="safety_stock" label="安全库存" width="90" />
+        <!-- 金额/库存列右对齐 + 等宽数字（Stripe 金融数字规范） -->
+        <el-table-column prop="cost_price" label="成本价" width="100" align="right" class-name="num" />
+        <el-table-column prop="sale_price" label="售价" width="100" align="right" class-name="num" />
+        <el-table-column prop="stock" label="库存" width="90" align="right" class-name="num" />
+        <el-table-column prop="safety_stock" label="安全库存" width="100" align="right" class-name="num" />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.alert_status ? 'danger' : 'success'">
+            <el-tag size="small" :type="row.alert_status ? 'danger' : 'success'" effect="light">
               {{ row.alert_status ? '预警' : '正常' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220">
+        <el-table-column label="操作" width="260">
           <template #default="{ row }">
             <el-button size="small" @click="openMappings(row)">SKU映射</el-button>
             <template v-if="canWrite">
@@ -48,13 +53,13 @@
         </el-table-column>
       </el-table>
   
-      <!-- 分页 -->
+      <!-- 分页：右对齐 -->
       <el-pagination
         v-model:current-page="query.page"
         :page-size="query.page_size"
         :total="total"
         layout="total, prev, pager, next"
-        style="margin-top: 12px"
+        class="pager"
         @current-change="load"
       />
     </el-card>
