@@ -82,6 +82,10 @@
         <el-form-item label="新密码" prop="new_password">
           <el-input v-model="resetForm.new_password" type="password" placeholder="≥6 位" show-password :prefix-icon="Lock" autocomplete="new-password" />
         </el-form-item>
+        <!-- 确认密码：纯前端校验字段，不随请求提交 -->
+        <el-form-item label="确认密码" prop="confirm_password">
+          <el-input v-model="resetForm.confirm_password" type="password" placeholder="再次输入新密码" show-password :prefix-icon="Lock" autocomplete="new-password" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button size="large" @click="resetVisible = false">取消</el-button>
@@ -135,7 +139,7 @@ const regForm = reactive<{ username: string; password: string; email: string; ro
   email: '',
   role: 'operator',
 })
-const resetForm = reactive({ username: '', email: '', new_password: '' })
+const resetForm = reactive({ username: '', email: '', new_password: '', confirm_password: '' })
 
 /** 登录校验规则：必填项前置拦截，减少无效请求 */
 const loginRules: FormRules = {
@@ -161,7 +165,11 @@ const regRules: FormRules = {
   ],
 }
 
-/** 重置密码校验规则 */
+/** 重置密码校验规则；确认密码用自定义 validator 校验两次一致 */
+const validateResetConfirm = (_rule: unknown, value: string, callback: (err?: Error) => void) => {
+  if (value !== resetForm.new_password) callback(new Error('两次输入的新密码不一致'))
+  else callback()
+}
 const resetRules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   email: [
@@ -171,6 +179,10 @@ const resetRules: FormRules = {
   new_password: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
     { min: 6, message: '密码至少 6 位', trigger: 'blur' },
+  ],
+  confirm_password: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateResetConfirm, trigger: 'blur' },
   ],
 }
 
@@ -227,7 +239,12 @@ async function onReset(): Promise<void> {
   if (!(await check(resetFormRef.value))) return
   loading.value = true
   try {
-    await authApi.resetPassword(resetForm)
+    // 显式构造请求体：confirm_password 是纯前端校验字段，不发给后端
+    await authApi.resetPassword({
+      username: resetForm.username,
+      email: resetForm.email,
+      new_password: resetForm.new_password,
+    })
     ElMessage.success('密码已重置，请使用新密码登录')
     loginForm.username = resetForm.username
     loginForm.password = ''
