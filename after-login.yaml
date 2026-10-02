@@ -1,0 +1,29 @@
+- generic [ref=e30]:
+  - complementary [ref=e31]:
+    - generic [ref=e32]: 跨境电商 AI 运营
+    - menubar [ref=e33]:
+      - menuitem "数据看板" [ref=e34] [cursor=pointer]
+      - menuitem "商品管理" [ref=e41] [cursor=pointer]
+      - menuitem "库存看板" [ref=e46] [cursor=pointer]
+      - menuitem "店铺管理" [ref=e51] [cursor=pointer]
+      - menuitem "AI 助手" [ref=e56] [cursor=pointer]
+  - generic [ref=e62]:
+    - generic [ref=e63]:
+      - generic [ref=e64]: 数据看板
+      - button [ref=e66] [cursor=pointer]
+    - main [ref=e70]:
+      - generic [ref=e72]:
+        - generic [ref=e76]:
+          - generic [ref=e77]: 商品总数
+          - generic [ref=e78]: "3"
+        - generic [ref=e82]:
+          - generic [ref=e83]: 预警商品
+          - generic [ref=e84]: "1"
+        - generic [ref=e88]:
+          - generic [ref=e89]: 店铺数量
+          - generic [ref=e90]: "1"
+        - generic [ref=e94]:
+          - generic [ref=e95]: 近7天销售额
+          - generic [ref=e96]:
+            - generic [ref=e97]: ￥
+            - text: "0.00"
