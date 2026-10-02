@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { decodeRole } from '../src/utils/jwt'
+import { decodeRole } from '@/utils/jwt'
 
 // 1) JWT payload 解码（Login.vue 中的 role 提取逻辑，抽到 utils 便于测试）
 describe('JWT role 解码', () => {

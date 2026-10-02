@@ -59,8 +59,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
-import { dashboardApi } from '../api'
-import type { DashboardStats } from '../types'
+import { dashboardApi } from '@/api'
+import type { DashboardStats } from '@/types'
 
 const stats = ref<DashboardStats>({
   total_products: 0,

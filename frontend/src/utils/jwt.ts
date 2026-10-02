@@ -2,7 +2,7 @@
  * JWT 客户端解码工具：从 token payload 提取角色。
  * 客户端解码仅用于菜单显示（体验层），安全边界在后端 RBAC。
  */
-import type { Role } from '../types'
+import type { Role } from '@/types'
 
 const VALID_ROLES: readonly Role[] = ['admin', 'operator', 'viewer']
 

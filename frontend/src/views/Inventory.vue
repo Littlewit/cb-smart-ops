@@ -99,9 +99,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { inventoryApi } from '../api'
-import { useAuthStore } from '../stores/auth'
-import type { InventoryLog, InventorySummary, Product } from '../types'
+import { inventoryApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+import type { InventoryLog, InventorySummary, Product } from '@/types'
 
 const auth = useAuthStore()
 const canWrite = computed(() => ['admin', 'operator'].includes(auth.role))

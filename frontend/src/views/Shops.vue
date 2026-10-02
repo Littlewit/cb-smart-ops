@@ -60,9 +60,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { shopsApi } from '../api'
-import { useAuthStore } from '../stores/auth'
-import type { Shop } from '../types'
+import { shopsApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+import type { Shop } from '@/types'
 
 const auth = useAuthStore()
 const isAdmin = computed(() => auth.role === 'admin')

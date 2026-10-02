@@ -12,8 +12,8 @@
 import axios from 'axios'
 import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
-import router from '../router'
-import { useAuthStore } from '../stores/auth'
+import router from '@/router'
+import { useAuthStore } from '@/stores/auth'
 
 const request = axios.create({
   baseURL: '/api', // 开发走 Vite 代理，生产走 Nginx 反代

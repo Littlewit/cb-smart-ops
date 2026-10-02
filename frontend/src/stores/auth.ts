@@ -4,7 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Role } from '../types'
+import type { Role } from '@/types'
 
 const TOKEN_KEY = 'cb_token'
 const USER_KEY = 'cb_user'

@@ -2,7 +2,7 @@
  * 各模块 API 封装：与后端路由一一对应（backend/app/routers/）。
  * 返回值已被 request.ts 拦截器解包为 data 部分，泛型 T 标注业务类型。
  */
-import request from './request'
+import request from '@/api/request'
 import type {
   AiSuggestion,
   InventoryLog,
@@ -11,7 +11,7 @@ import type {
   Product,
   Shop,
   SkuMapping,
-} from '../types'
+} from '@/types'
 
 // ---------- 认证 ----------
 export interface LoginResult {
@@ -64,7 +64,7 @@ export const inventoryApi = {
 }
 
 // ---------- 看板 ----------
-import type { DashboardStats } from '../types'
+import type { DashboardStats } from '@/types'
 
 export const dashboardApi = {
   stats: () => request.get<DashboardStats>('/dashboard/stats'),

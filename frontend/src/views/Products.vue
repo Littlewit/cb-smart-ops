@@ -116,9 +116,9 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { productsApi, shopsApi } from '../api'
-import { useAuthStore } from '../stores/auth'
-import type { Product, Shop, SkuMapping } from '../types'
+import { productsApi, shopsApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+import type { Product, Shop, SkuMapping } from '@/types'
 
 const auth = useAuthStore()
 // operator 及以上才显示写操作（安全边界在后端，这里只是隐藏入口）

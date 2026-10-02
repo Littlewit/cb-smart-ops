@@ -48,10 +48,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { authApi } from '../api'
-import { useAuthStore } from '../stores/auth'
-import { decodeRole } from '../utils/jwt'
-import type { Role } from '../types'
+import { authApi } from '@/api'
+import { useAuthStore } from '@/stores/auth'
+import { decodeRole } from '@/utils/jwt'
+import type { Role } from '@/types'
 
 const router = useRouter()
 const route = useRoute()

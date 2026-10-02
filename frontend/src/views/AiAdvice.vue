@@ -77,8 +77,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { aiApi, productsApi } from '../api'
-import type { AiSuggestion, Product } from '../types'
+import { aiApi, productsApi } from '@/api'
+import type { AiSuggestion, Product } from '@/types'
 
 // ---------- 对话（SSE 流式） ----------
 interface ChatMessage {
@@ -117,7 +117,7 @@ async function onSend(): Promise<void> {
   scrollBottom()
 
   try {
-    const { useAuthStore } = await import('../stores/auth')
+    const { useAuthStore } = await import('@/stores/auth')
     const authStore = useAuthStore()
     const resp = await fetch('/api/ai/chat', {
       method: 'POST',

@@ -8,8 +8,8 @@
  */
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import type { Role } from '../types'
+import { useAuthStore } from '@/stores/auth'
+import type { Role } from '@/types'
 
 // 角色等级：与后端 ROLE_LEVELS 保持一致
 const ROLE_LEVELS: Record<Role, number> = { viewer: 0, operator: 1, admin: 2 }
@@ -24,17 +24,17 @@ declare module 'vue-router' {
 }
 
 const routes: RouteRecordRaw[] = [
-  { path: '/login', component: () => import('../views/Login.vue'), meta: { public: true } },
+  { path: '/login', component: () => import('@/views/Login.vue'), meta: { public: true } },
   {
     path: '/',
-    component: () => import('../layouts/MainLayout.vue'),
+    component: () => import('@/layouts/MainLayout.vue'),
     redirect: '/dashboard',
     children: [
-      { path: 'dashboard', component: () => import('../views/Dashboard.vue'), meta: { title: '数据看板' } },
-      { path: 'products', component: () => import('../views/Products.vue'), meta: { title: '商品管理', role: 'viewer' } },
-      { path: 'inventory', component: () => import('../views/Inventory.vue'), meta: { title: '库存看板', role: 'viewer' } },
-      { path: 'shops', component: () => import('../views/Shops.vue'), meta: { title: '店铺管理', role: 'viewer' } },
-      { path: 'ai', component: () => import('../views/AiAdvice.vue'), meta: { title: 'AI 助手', role: 'viewer' } },
+      { path: 'dashboard', component: () => import('@/views/Dashboard.vue'), meta: { title: '数据看板' } },
+      { path: 'products', component: () => import('@/views/Products.vue'), meta: { title: '商品管理', role: 'viewer' } },
+      { path: 'inventory', component: () => import('@/views/Inventory.vue'), meta: { title: '库存看板', role: 'viewer' } },
+      { path: 'shops', component: () => import('@/views/Shops.vue'), meta: { title: '店铺管理', role: 'viewer' } },
+      { path: 'ai', component: () => import('@/views/AiAdvice.vue'), meta: { title: 'AI 助手', role: 'viewer' } },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/' },
