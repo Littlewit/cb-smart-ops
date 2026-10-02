@@ -82,11 +82,15 @@ body,
   border-color: var(--s-primary-press);
 }
 
-/* 卡片：12px 圆角（rounded.lg）+ 蓝调阴影 */
+/* 卡片：12px 圆角，默认无边框阴影（干净平面）；
+   仅 shadow="hover" 的卡片悬浮时显示蓝调阴影 */
 .el-card {
   border-radius: 12px;
-  border-color: var(--s-hairline);
-  box-shadow: 0 1px 3px rgba(0, 55, 112, 0.06), 0 8px 24px rgba(0, 55, 112, 0.06);
+  border: 1px solid var(--s-hairline);
+  box-shadow: none;
+}
+.el-card.is-hover-shadow:hover {
+  box-shadow: 0 1px 3px rgba(0, 55, 112, 0.06), 0 8px 24px rgba(0, 55, 112, 0.08);
 }
 
 /* ---------- 表格：Stripe 数据表风格 ----------
@@ -99,9 +103,10 @@ body,
   --el-table-row-hover-bg-color: #f2f4fe;    /* primary-light 浅底悬浮 */
   --el-table-tr-bg-color: var(--s-canvas);
 
-  border: 1px solid var(--s-hairline);
+  /* 无外边框，仅保留圆角（曲线）裁切 */
+  border: none;
   border-radius: 12px;
-  overflow: hidden;                          /* 圆角裁切内部单元格 */
+  overflow: hidden;
 }
 
 /* 表头：小号 mute 文字 + 轻微字距，弱化层级让数据说话 */

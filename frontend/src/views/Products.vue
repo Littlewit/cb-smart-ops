@@ -1,53 +1,63 @@
 <template>
   <div class="page">
-    <!-- 工具栏：搜索 / 预警过滤 / 新增 -->
-    <el-form inline>
-      <el-input v-model="query.q" placeholder="SKU / 名称搜索" clearable style="width: 220px" @change="load" />
-      <el-select v-model="query.shop_id" placeholder="全部店铺" clearable style="width: 160px" @change="load">
-        <el-option v-for="s in shops" :key="s.id" :label="s.name" :value="s.id" />
-      </el-select>
-      <el-select v-model="query.alert" placeholder="全部状态" clearable style="width: 140px" @change="load">
-        <el-option label="仅预警商品" :value="true" />
-        <el-option label="仅正常商品" :value="false" />
-      </el-select>
-      <el-button type="primary" v-if="canWrite" @click="openCreate">新增商品</el-button>
-    </el-form>
-
-    <!-- 商品表格：预警行红色高亮 -->
-    <el-table :data="items" v-loading="loading" :row-class-name="rowClass">
-      <el-table-column prop="sku" label="SKU" width="140" />
-      <el-table-column prop="name" label="名称" min-width="160" />
-      <el-table-column prop="cost_price" label="成本价" width="90" />
-      <el-table-column prop="sale_price" label="售价" width="90" />
-      <el-table-column prop="stock" label="库存" width="80" />
-      <el-table-column prop="safety_stock" label="安全库存" width="90" />
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="row.alert_status ? 'danger' : 'success'">
-            {{ row.alert_status ? '预警' : '正常' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="220">
-        <template #default="{ row }">
-          <el-button size="small" @click="openMappings(row)">SKU映射</el-button>
-          <template v-if="canWrite">
-            <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="onDelete(row)">删除</el-button>
+    <el-card shadow="hover">
+      <!-- 工具栏：搜索 / 预警过滤 / 新增 -->
+      <el-form inline>
+        <el-form-item label="关键字">
+          <el-input v-model="query.q" placeholder="SKU / 名称搜索" clearable style="width: 220px" @change="load" />
+        </el-form-item>
+        <el-form-item label="店铺">
+          <el-select v-model="query.shop_id" placeholder="全部店铺" clearable style="width: 160px" @change="load">
+            <el-option v-for="s in shops" :key="s.id" :label="s.name" :value="s.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="query.alert" placeholder="全部状态" clearable style="width: 140px" @change="load">
+            <el-option label="仅预警商品" :value="true" />
+            <el-option label="仅正常商品" :value="false" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="canWrite">
+          <el-button type="primary" @click="openCreate">新增商品</el-button>
+        </el-form-item>
+      </el-form>
+  
+      <!-- 商品表格：预警行红色高亮 -->
+      <el-table :data="items" v-loading="loading" :row-class-name="rowClass">
+        <el-table-column prop="sku" label="SKU" width="140" />
+        <el-table-column prop="name" label="名称" min-width="160" />
+        <el-table-column prop="cost_price" label="成本价" width="90" />
+        <el-table-column prop="sale_price" label="售价" width="90" />
+        <el-table-column prop="stock" label="库存" width="80" />
+        <el-table-column prop="safety_stock" label="安全库存" width="90" />
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.alert_status ? 'danger' : 'success'">
+              {{ row.alert_status ? '预警' : '正常' }}
+            </el-tag>
           </template>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <!-- 分页 -->
-    <el-pagination
-      v-model:current-page="query.page"
-      :page-size="query.page_size"
-      :total="total"
-      layout="total, prev, pager, next"
-      style="margin-top: 12px"
-      @current-change="load"
-    />
+        </el-table-column>
+        <el-table-column label="操作" width="220">
+          <template #default="{ row }">
+            <el-button size="small" @click="openMappings(row)">SKU映射</el-button>
+            <template v-if="canWrite">
+              <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button size="small" type="danger" @click="onDelete(row)">删除</el-button>
+            </template>
+          </template>
+        </el-table-column>
+      </el-table>
+  
+      <!-- 分页 -->
+      <el-pagination
+        v-model:current-page="query.page"
+        :page-size="query.page_size"
+        :total="total"
+        layout="total, prev, pager, next"
+        style="margin-top: 12px"
+        @current-change="load"
+      />
+    </el-card>
 
     <!-- 新增/编辑 dialog -->
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑商品' : '新增商品'" width="480px">
