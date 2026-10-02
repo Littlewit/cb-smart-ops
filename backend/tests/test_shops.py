@@ -36,13 +36,39 @@ def test_shop_response_never_leaks_credentials(client, admin_headers, shop_id):
 
 
 def test_duplicate_shop_name_conflict(client, admin_headers, shop_id):
-    """同平台店铺名唯一 → 409。"""
+    """同平台店铺名唯一 → 409（更新改名同样校验）。"""
     resp = client.post(
         "/api/shops",
         json={"platform": "mock", "name": "测试店铺"},
         headers=admin_headers,
     )
     assert resp.status_code == 409
+
+    # 再建一家"其他店"，PUT 把测试店铺改成"其他店" → 撞名 409（修复：此前 500）
+    client.post(
+        "/api/shops",
+        json={"platform": "mock", "name": "其他店"},
+        headers=admin_headers,
+    )
+    resp = client.put(
+        f"/api/shops/{shop_id}", json={"name": "其他店"}, headers=admin_headers
+    )
+    assert resp.status_code == 409
+
+
+def test_delete_shop_cascades_products(client, admin_headers, operator_headers, shop_id, monkeypatch):
+    """删除店铺级联清理商品（PG 外键约束场景回归，此前孤儿商品导致 500）。"""
+    monkeypatch.setattr(platform_client, "fetch_products", lambda platform: MOCK_ITEMS)
+    client.post(f"/api/shops/{shop_id}/sync", headers=operator_headers)
+
+    # 同步出 1 个商品后删除店铺
+    resp = client.delete(f"/api/shops/{shop_id}", headers=admin_headers)
+    assert resp.status_code == 200
+
+    # 店铺与其商品一并消失，无孤儿数据
+    assert client.get("/api/shops", headers=admin_headers).json()["data"] == []
+    resp = client.get("/api/products", headers=admin_headers)
+    assert resp.json()["data"]["total"] == 0
 
 
 def test_sync_idempotent(client, admin_headers, operator_headers, shop_id, monkeypatch):

@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
-from app.models import Shop
+from app.models import AiSuggestion, InventoryLog, Product, ProductSkuMapping, Shop
 from app.schemas import ShopCreate, ShopUpdate
 
 
@@ -51,9 +51,22 @@ async def create_shop(db: AsyncSession, payload: ShopCreate) -> Shop:
 
 
 async def update_shop(db: AsyncSession, shop_id: str, payload: ShopUpdate) -> Shop:
-    """部分更新店铺；传入 credentials 则重新加密。"""
+    """部分更新店铺；传入 credentials 则重新加密。
+
+    重名校验：改名撞同平台已有店铺名时返回 409，
+    避免落到数据库唯一约束变成 500。
+    """
     shop = await get_shop_or_404(db, shop_id)
-    if payload.name is not None:
+    if payload.name is not None and payload.name != shop.name:
+        exists = await db.execute(
+            select(Shop).where(
+                Shop.platform == shop.platform,
+                Shop.name == payload.name,
+                Shop.id != shop_id,
+            )
+        )
+        if exists.scalar_one_or_none() is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "同平台下店铺名已存在")
         shop.name = payload.name
     if payload.status is not None:
         shop.status = payload.status
@@ -65,7 +78,31 @@ async def update_shop(db: AsyncSession, shop_id: str, payload: ShopUpdate) -> Sh
 
 
 async def delete_shop(db: AsyncSession, shop_id: str) -> None:
-    """删除店铺（演示项目直接物理删除；不做级联校验，商品须先清理）。"""
+    """删除店铺：级联清理其下商品及商品的 SKU 映射/库存流水/AI 建议。
+
+    级联是必须的：PG 部署下外键约束会因孤儿商品直接抛 IntegrityError（500），
+    SQLite 开发期不启用外键检查所以掩盖了该问题。
+    """
     shop = await get_shop_or_404(db, shop_id)
+
+    product_ids = (
+        await db.execute(select(Product.id).where(Product.shop_id == shop_id))
+    ).scalars().all()
+    if product_ids:
+        # 先删孙子表（映射/流水/建议），再删商品，最后删店铺
+        for model, field in (
+            (ProductSkuMapping, ProductSkuMapping.product_id),
+            (InventoryLog, InventoryLog.product_id),
+            (AiSuggestion, AiSuggestion.product_id),
+        ):
+            for row in (
+                await db.execute(select(model).where(field.in_(product_ids)))
+            ).scalars():
+                await db.delete(row)
+        for row in (
+            await db.execute(select(Product).where(Product.shop_id == shop_id))
+        ).scalars():
+            await db.delete(row)
+
     await db.delete(shop)
     await db.flush()

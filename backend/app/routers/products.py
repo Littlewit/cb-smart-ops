@@ -36,9 +36,10 @@ async def list_products(
     query = select(Product).order_by(Product.created_at.desc())
     count_query = select(func.count(Product.id))
     # 三个过滤条件同时拼到列表查询与计数查询上，保证 total 一致
+    # 用 ilike：PG 大小写敏感（like 区分大小写），SQLite 双方言均兼容
     if q:
         like = f"%{q}%"
-        cond = or_(Product.sku.like(like), Product.name.like(like))
+        cond = or_(Product.sku.ilike(like), Product.name.ilike(like))
         query, count_query = query.where(cond), count_query.where(cond)
     if shop_id:
         query, count_query = query.where(Product.shop_id == shop_id), count_query.where(

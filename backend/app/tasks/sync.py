@@ -5,7 +5,6 @@
 """
 
 import asyncio
-from datetime import datetime
 
 from sqlalchemy import select, update
 
@@ -110,13 +109,4 @@ def scan_alerts_task() -> dict:
             )
             return {"refreshed": result.rowcount}
 
-    # updated_at 手动刷新（UPDATE 语句不走 ORM onupdate）
-    async def _touch() -> None:
-        async with task_session() as session:
-            await session.execute(
-                update(Product).values(updated_at=datetime.now())
-            )
-
-    result = asyncio.run(_run())
-    asyncio.run(_touch())
-    return result
+    return asyncio.run(_run())

@@ -117,7 +117,8 @@ async function onSync(row: Shop): Promise<void> {
   syncingId.value = row.id
   try {
     await shopsApi.sync(row.id)
-    ElMessage.success(`店铺「${row.name}」同步完成，商品列表已更新`)
+    // 生产环境 Celery 为异步队列：返回即代表任务已提交，商品稍后更新
+    ElMessage.success(`店铺「${row.name}」同步任务已提交，商品列表稍后更新`)
   } finally {
     syncingId.value = ''
   }

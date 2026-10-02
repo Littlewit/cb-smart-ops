@@ -14,10 +14,19 @@ interface StoredUser {
   role: Role
 }
 
+/** 安全读取 localStorage 中的用户信息（脏数据/损坏 JSON 时返回 null） */
+function readStoredUser(): StoredUser | null {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   // state：从 localStorage 恢复，刷新页面不丢登录态
   const token = ref(localStorage.getItem(TOKEN_KEY) || '')
-  const user = ref<StoredUser | null>(JSON.parse(localStorage.getItem(USER_KEY) || 'null'))
+  const user = ref<StoredUser | null>(readStoredUser())
 
   // getters
   const isLoggedIn = computed(() => !!token.value)

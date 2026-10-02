@@ -25,6 +25,7 @@ def fetch_products(platform: str) -> list[dict]:
         f"{settings.mock_platform_url}/api/{platform}/products",
         headers={"Authorization": "Bearer mock-token"},  # Mock 网关仅校验 Bearer 前缀
         timeout=10,
+        trust_env=False,  # 内网服务间调用：忽略系统代理，避免代理劫持 127.0.0.1 请求
     )
     resp.raise_for_status()
     return resp.json()["products"]
