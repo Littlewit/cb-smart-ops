@@ -54,14 +54,18 @@
       </el-header>
       <el-main><router-view /></el-main>
 
-      <!-- 修改密码弹窗：验证旧密码后设置新密码，成功后强制重新登录 -->
-      <el-dialog v-model="pwdVisible" title="修改密码" width="420px">
-        <el-form :model="pwdForm" label-width="80px">
-          <el-form-item label="旧密码">
-            <el-input v-model="pwdForm.old_password" type="password" show-password autocomplete="new-password" />
+      <!-- 修改密码弹窗：验证旧密码后设置新密码，成功后强制重新登录；
+           确认密码为纯前端校验字段，不随请求提交 -->
+      <el-dialog v-model="pwdVisible" title="修改密码" width="420px" @closed="pwdFormRef?.resetFields()">
+        <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="80px" style="margin-top: 30px;">
+          <el-form-item label="旧密码" prop="old_password">
+            <el-input v-model="pwdForm.old_password" type="password" show-password :prefix-icon="Lock" autocomplete="new-password" />
           </el-form-item>
-          <el-form-item label="新密码">
-            <el-input v-model="pwdForm.new_password" type="password" placeholder="≥6 位" show-password autocomplete="new-password" />
+          <el-form-item label="新密码" prop="new_password">
+            <el-input v-model="pwdForm.new_password" type="password" placeholder="≥6 位" show-password :prefix-icon="Lock" autocomplete="new-password" />
+          </el-form-item>
+          <el-form-item label="确认密码" prop="confirm_password">
+            <el-input v-model="pwdForm.confirm_password" type="password" placeholder="再次输入新密码" show-password :prefix-icon="Lock" autocomplete="new-password" />
           </el-form-item>
         </el-form>
         <template #footer>
@@ -77,6 +81,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import type { FormInstance, FormItemRule } from 'element-plus'
+import { Lock } from '@element-plus/icons-vue'
 import { authApi, inventoryApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -109,17 +115,39 @@ function onLogout(): void {
 // ---------- 修改密码 ----------
 const pwdVisible = ref(false)
 const pwdLoading = ref(false)
-const pwdForm = reactive({ old_password: '', new_password: '' })
+const pwdFormRef = ref<FormInstance>()
+const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' })
+
+/** 确认密码一致性校验：仅前端体验层，confirm_password 不随请求提交 */
+const validateConfirm = (_rule: unknown, value: string, callback: (err?: Error) => void) => {
+  if (value !== pwdForm.new_password) callback(new Error('两次输入的新密码不一致'))
+  else callback()
+}
+
+const pwdRules: Record<string, FormItemRule[]> = {
+  old_password: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+  new_password: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
+  ],
+  confirm_password: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateConfirm, trigger: 'blur' },
+  ],
+}
 
 /** 修改成功后强制重新登录（简单起见不做"本会话保持"，安全上更稳妥） */
 async function onChangePwd(): Promise<void> {
-  if (pwdForm.new_password.length < 6) {
-    ElMessage.warning('新密码 ≥6 位')
-    return
-  }
+  // validate() 校验失败时 reject，catch 转 false（错误提示已内联在字段下方）
+  const valid = await pwdFormRef.value?.validate().then(() => true).catch(() => false)
+  if (!valid) return
   pwdLoading.value = true
   try {
-    await authApi.changePassword({ ...pwdForm })
+    // 显式构造请求体：confirm_password 是纯前端校验字段，不发给后端
+    await authApi.changePassword({
+      old_password: pwdForm.old_password,
+      new_password: pwdForm.new_password,
+    })
     ElMessage.success('密码修改成功，请重新登录')
     pwdVisible.value = false
     onLogout()
