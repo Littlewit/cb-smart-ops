@@ -37,3 +37,6 @@ tmp/
 .playwright-cli/
 # 根目录临时截图（调试产物，正式截图在 docs/ 下）
 /*.png
+# 根目录快照 yaml（playwright-cli snapshot 偶发落盘到根目录）
+/*.yaml
+/*.yml
