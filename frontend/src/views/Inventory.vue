@@ -107,7 +107,7 @@
           <el-input-number v-model="opForm.quantity" :min="0" />
           <span v-if="opForm.type === 'check'" style="margin-left: 8px; color: #909399">实盘数量</span>
         </el-form-item>
-        <el-form-item label="原因"><el-input v-model="opForm.reason" placeholder="可留空自动生成" /></el-form-item>
+        <el-form-item label="原因"><el-input v-model="opForm.reason" placeholder="可留空自动生成" autocomplete="off" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="opVisible = false">取消</el-button>

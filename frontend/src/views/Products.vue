@@ -4,7 +4,7 @@
       <!-- 工具栏：搜索 / 预警过滤 / 新增 -->
       <el-form inline>
         <el-form-item label="关键字">
-          <el-input v-model="query.q" placeholder="SKU / 名称搜索" clearable style="width: 220px" @change="load">
+          <el-input v-model="query.q" placeholder="SKU / 名称搜索" clearable style="width: 220px" autocomplete="off" @change="load">
             <template #prefix><el-icon><Search /></el-icon></template>
           </el-input>
         </el-form-item>
@@ -82,10 +82,10 @@
           </el-select>
         </el-form-item>
         <el-form-item label="SKU" v-if="!editingId">
-          <el-input v-model="form.sku" />
+          <el-input v-model="form.sku" autocomplete="off" />
         </el-form-item>
         <el-form-item label="名称">
-          <el-input v-model="form.name" />
+          <el-input v-model="form.name" autocomplete="off" />
         </el-form-item>
         <el-form-item label="成本价"><el-input-number v-model="form.cost_price" :min="0" :precision="2" /></el-form-item>
         <el-form-item label="售价"><el-input-number v-model="form.sale_price" :min="0" :precision="2" /></el-form-item>
@@ -106,7 +106,7 @@
           <el-option label="Shopify" value="shopify" />
           <el-option label="Mock" value="mock" />
         </el-select>
-        <el-input v-model="mappingForm.external_sku" placeholder="平台侧SKU" style="width: 150px" />
+        <el-input v-model="mappingForm.external_sku" placeholder="平台侧SKU" style="width: 150px" autocomplete="off" />
         <el-button type="primary" v-if="canWrite" @click="addMapping">添加</el-button>
       </el-form>
       <el-table :data="mappings">

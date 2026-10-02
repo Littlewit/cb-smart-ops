@@ -58,10 +58,10 @@
       <el-dialog v-model="pwdVisible" title="修改密码" width="420px">
         <el-form :model="pwdForm" label-width="80px">
           <el-form-item label="旧密码">
-            <el-input v-model="pwdForm.old_password" type="password" show-password />
+            <el-input v-model="pwdForm.old_password" type="password" show-password autocomplete="new-password" />
           </el-form-item>
           <el-form-item label="新密码">
-            <el-input v-model="pwdForm.new_password" type="password" placeholder="≥6 位" show-password />
+            <el-input v-model="pwdForm.new_password" type="password" placeholder="≥6 位" show-password autocomplete="new-password" />
           </el-form-item>
         </el-form>
         <template #footer>

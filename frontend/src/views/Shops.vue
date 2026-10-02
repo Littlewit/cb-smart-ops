@@ -46,9 +46,9 @@
             <el-option label="Shopify" value="shopify" />
           </el-select>
         </el-form-item>
-        <el-form-item label="店铺名"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item label="店铺名"><el-input v-model="form.name" autocomplete="off" /></el-form-item>
         <el-form-item label="API 凭证">
-          <el-input v-model="form.credentials" type="password" show-password placeholder="仅创建时传入，落库即加密" />
+          <el-input v-model="form.credentials" type="password" show-password placeholder="仅创建时传入，落库即加密" autocomplete="new-password" />
         </el-form-item>
       </el-form>
       <template #footer>

@@ -13,6 +13,7 @@
           v-model="input"
           placeholder="例如：MOCK-002 库存不足怎么办？"
           :disabled="streaming"
+          autocomplete="off"
           @keyup.enter="onSend"
         />
         <el-button type="primary" :loading="streaming" @click="onSend">发送</el-button>

@@ -6,10 +6,11 @@
       <!-- 登录主表单（注册/忘记密码均为弹窗入口；登录需图形验证码防暴力破解） -->
       <el-form :model="loginForm" @keyup.enter="onLogin">
         <el-form-item>
-          <el-input v-model="loginForm.username" placeholder="用户名" />
+          <el-input v-model="loginForm.username" placeholder="用户名" autocomplete="off" />
         </el-form-item>
+        <!-- 密码框用 new-password：Chrome 会无视 off 强制填充已存密码 -->
         <el-form-item>
-          <el-input v-model="loginForm.password" type="password" placeholder="密码" show-password />
+          <el-input v-model="loginForm.password" type="password" placeholder="密码" show-password autocomplete="new-password" />
         </el-form-item>
         <el-form-item>
           <div class="captcha-row">
@@ -17,6 +18,7 @@
               v-model="loginForm.captcha_code"
               placeholder="验证码"
               maxlength="4"
+              autocomplete="off"
               @keyup.enter="onLogin"
             />
             <!-- 点击图片刷新验证码；一次性校验，失败后也需刷新 -->
@@ -39,13 +41,13 @@
     <el-dialog v-model="regVisible" title="注册账号" width="440px">
       <el-form :model="regForm" label-width="70px">
         <el-form-item label="用户名">
-          <el-input v-model="regForm.username" placeholder="≥3 位" />
+          <el-input v-model="regForm.username" placeholder="≥3 位" autocomplete="off" />
         </el-form-item>
         <el-form-item label="密码">
-          <el-input v-model="regForm.password" type="password" placeholder="≥6 位" show-password />
+          <el-input v-model="regForm.password" type="password" placeholder="≥6 位" show-password autocomplete="new-password" />
         </el-form-item>
         <el-form-item label="邮箱">
-          <el-input v-model="regForm.email" placeholder="用于忘记密码时身份匹配" />
+          <el-input v-model="regForm.email" placeholder="用于忘记密码时身份匹配" autocomplete="off" />
         </el-form-item>
         <el-form-item label="角色">
           <el-select v-model="regForm.role" style="width: 100%">
@@ -71,13 +73,13 @@
       />
       <el-form :model="resetForm" label-width="80px">
         <el-form-item label="用户名">
-          <el-input v-model="resetForm.username" />
+          <el-input v-model="resetForm.username" autocomplete="off" />
         </el-form-item>
         <el-form-item label="注册邮箱">
-          <el-input v-model="resetForm.email" />
+          <el-input v-model="resetForm.email" autocomplete="off" />
         </el-form-item>
         <el-form-item label="新密码">
-          <el-input v-model="resetForm.new_password" type="password" placeholder="≥6 位" show-password />
+          <el-input v-model="resetForm.new_password" type="password" placeholder="≥6 位" show-password autocomplete="new-password" />
         </el-form-item>
       </el-form>
       <template #footer>
