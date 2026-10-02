@@ -85,7 +85,6 @@ body,
 /* 卡片：12px 圆角，默认无边框阴影（干净平面）；
    仅 shadow="hover" 的卡片悬浮时显示蓝调阴影 */
 .el-card {
-  border-radius: 12px;
   border: 1px solid var(--s-hairline);
   box-shadow: none;
 }
