@@ -10,7 +10,6 @@
         </div>
       </div>
       <el-descriptions :column="1" border style="margin-top: 20px">
-        <el-descriptions-item label="用户 ID">{{ profile?.id }}</el-descriptions-item>
         <el-descriptions-item label="角色">{{ roleLabel }}</el-descriptions-item>
         <el-descriptions-item label="注册时间">{{ formatDate(profile?.created_at) }}</el-descriptions-item>
         <el-descriptions-item label="当前邮箱">{{ profile?.email || '—' }}</el-descriptions-item>
