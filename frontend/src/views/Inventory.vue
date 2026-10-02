@@ -43,7 +43,27 @@
         <el-table-column prop="sku" label="SKU" width="140" />
         <el-table-column prop="name" label="名称" min-width="160" />
         <el-table-column prop="stock" label="当前库存" width="100" align="center" />
-        <el-table-column prop="safety_stock" label="安全库存" width="100" align="center" />
+        <el-table-column width="190" align="center">
+          <template #header>
+            安全库存
+            <el-tooltip content="调整阈值后预警状态实时重算（需运营权限）" placement="top">
+              <el-icon style="vertical-align: -2px"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <!-- @click.stop 防止触发行点击打开流水抽屉；改完即调 API 重算预警 -->
+            <el-input-number
+              v-if="canWrite"
+              :model-value="row.safety_stock"
+              size="small"
+              :min="0"
+              style="width: 110px"
+              @click.stop
+              @change="(v: number | undefined) => onSafetyChange(row, v)"
+            />
+            <span v-else>{{ row.safety_stock }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="140" align="center">
           <template #default="{ row }">
             <el-button size="small" type="primary" v-if="canWrite" @click.stop="openOp(row)">入库/出库</el-button>
@@ -100,7 +120,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { inventoryApi } from '@/api'
+import { inventoryApi, productsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import type { InventoryLog, InventorySummary, Product } from '@/types'
 
@@ -141,6 +161,17 @@ function openOp(row: Product): void {
   currentProduct.value = row
   Object.assign(opForm, { type: 'in', quantity: 0, reason: '' })
   opVisible.value = true
+}
+
+/**
+ * 行内修改安全库存：更新后预警状态由后端同事务重算，
+ * 重新拉取概览即可看到预警列表实时变化（规则闭环演示点）。
+ */
+async function onSafetyChange(row: Product, value: number | undefined): Promise<void> {
+  if (value === undefined || value === row.safety_stock) return
+  await productsApi.update(row.id, { safety_stock: value })
+  ElMessage.success(`${row.sku} 安全库存已更新为 ${value}`)
+  load()
 }
 
 /** 提交入库/出库/盘点：余额与流水由后端同事务保证 */

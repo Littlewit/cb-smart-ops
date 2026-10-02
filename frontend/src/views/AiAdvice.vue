@@ -119,13 +119,19 @@ async function onSend(): Promise<void> {
   try {
     const { useAuthStore } = await import('@/stores/auth')
     const authStore = useAuthStore()
+    // 多轮上下文：取当前消息列表（去掉首条欢迎语与刚 push 的流式占位）最近 6 轮回传，
+    // 后端无状态不存会话，历史由前端维护
+    const history = messages.value
+      .filter((m, i) => i > 0 && m !== aiMsg && !m.streaming)
+      .slice(-6)
+      .map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }))
     const resp = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authStore.token}`,
       },
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify({ message: text, history }),
     })
     if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`)
 

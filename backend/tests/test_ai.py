@@ -172,7 +172,7 @@ def test_chat_sse_fallback_without_key(client, viewer_headers):
 
 def test_chat_sse_streamed_chunks(client, viewer_headers, monkeypatch):
     """mock LLM 流式输出 → 多帧推送 + 结束帧。"""
-    async def fake_stream(system, user):
+    async def fake_stream(system, user, history=None):
         for chunk in ["建议", "补货", "42", "件"]:
             yield chunk
 
@@ -185,3 +185,29 @@ def test_chat_sse_streamed_chunks(client, viewer_headers, monkeypatch):
     assert body.count("data: ") == 5  # 4 个内容帧 + 1 个 [DONE]
     assert "[DONE]" in body
     assert "建议" in body and "42" in body
+
+
+def test_chat_passes_history_to_llm(client, viewer_headers, monkeypatch):
+    """多轮上下文：前端回传的 history 应原样传给 stream_chat（截取最近 6 轮）。"""
+    captured = {}
+
+    async def fake_stream(system, user, history=None):
+        captured["history"] = history
+        yield "好的"
+
+    monkeypatch.setattr(llm, "stream_chat", fake_stream)
+    history_payload = [
+        {"role": "user", "content": f"问题{i}"} for i in range(1, 9)
+    ]  # 8 轮，超过 6 → 应只保留最近 6 轮
+    with client.stream(
+        "POST",
+        "/api/ai/chat",
+        json={"message": "继续", "history": history_payload},
+        headers=viewer_headers,
+    ) as resp:
+        assert resp.status_code == 200
+        b"".join(resp.iter_bytes())
+
+    assert len(captured["history"]) == 6
+    assert captured["history"][0]["content"] == "问题3"   # 8 轮截取最近 6 轮 → 从问题3 开始
+    assert captured["history"][-1]["content"] == "问题8"

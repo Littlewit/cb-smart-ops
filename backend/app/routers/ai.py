@@ -127,15 +127,20 @@ async def chat(
 ):
     """AI 对话（SSE 流式）：text/event-stream，帧格式 data: {"delta": "..."}。
 
-    流程：RAG 检索规则拼入 system prompt → DeepSeek stream → 逐帧推送
-    → 结束帧 data: [DONE]。LLM 不可用时推送规则引擎兜底回答（不报错）。
+    流程：RAG 检索规则拼入 system prompt → DeepSeek stream（含多轮上下文）
+    → 逐帧推送 → 结束帧 data: [DONE]。LLM 不可用时推送规则引擎兜底回答。
+    历史由前端回传（无状态），此处只保留最近 6 轮防 token 滥用。
     """
     rules = await rag.retrieve_rules(db, payload.message)
     system = prompts.build_chat_system(rules)
+    # 截取最近 6 轮并转为 OpenAI messages 格式（防 prompt 超长/注入堆积）
+    history = [
+        {"role": t.role, "content": t.content} for t in payload.history[-6:]
+    ]
 
     async def event_generator():
         try:
-            async for delta in llm.stream_chat(system, payload.message):
+            async for delta in llm.stream_chat(system, payload.message, history):
                 yield _sse_event(delta)
         except llm.LLMUnavailable:
             # 兜底：无密钥/未启用时，用检索到的规则原文回答，保证可用性

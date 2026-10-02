@@ -80,15 +80,19 @@ async def chat_json(system: str, user: str) -> dict | None:
     return None
 
 
-async def stream_chat(system: str, user: str) -> AsyncIterator[str]:
-    """流式对话：逐段 yield 文本增量；不可用/异常时抛 LLMUnavailable 或原异常。"""
+async def stream_chat(
+    system: str, user: str, history: list[dict] | None = None
+) -> AsyncIterator[str]:
+    """流式对话：逐段 yield 文本增量；不可用/异常时抛 LLMUnavailable 或原异常。
+
+    history：多轮上下文（[{role, content}, ...]），按时间顺序插在 system 与
+    本次提问之间；由调用方负责截断轮数（router 限制最近 6 轮）。
+    """
     client = _new_client()  # 未启用时在此抛 LLMUnavailable
+    messages = [{"role": "system", "content": system}, *(history or []), {"role": "user", "content": user}]
     stream = await client.chat.completions.create(
         model=get_settings().deepseek_model,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
+        messages=messages,
         stream=True,
     )
     async for chunk in stream:
