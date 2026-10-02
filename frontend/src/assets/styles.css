@@ -89,14 +89,78 @@ body,
   box-shadow: 0 1px 3px rgba(0, 55, 112, 0.06), 0 8px 24px rgba(0, 55, 112, 0.06);
 }
 
-/* 表格：表头用 canvas-soft 底 + mute 文字 */
+/* ---------- 表格：Stripe 数据表风格 ----------
+   去竖线只留横向发丝线、表头弱化、行距加宽、悬浮 indigo 浅底 */
+
 .el-table {
+  --el-table-border-color: transparent;      /* 去掉默认竖向边框 */
   --el-table-header-bg-color: var(--s-canvas-soft);
   --el-table-header-text-color: var(--s-ink-mute);
-  --el-table-row-hover-bg-color: #f2f4fe;
+  --el-table-row-hover-bg-color: #f2f4fe;    /* primary-light 浅底悬浮 */
+  --el-table-tr-bg-color: var(--s-canvas);
+
+  border: 1px solid var(--s-hairline);
+  border-radius: 12px;
+  overflow: hidden;                          /* 圆角裁切内部单元格 */
 }
+
+/* 表头：小号 mute 文字 + 轻微字距，弱化层级让数据说话 */
 .el-table th.el-table__cell {
+  background: var(--s-canvas-soft);
   font-weight: 400;
+  font-size: 13px;
+  color: var(--s-ink-mute);
+  letter-spacing: 0.2px;
+  padding: 10px 0;
+}
+
+/* 数据行：加宽行距 + 等宽数字对齐价格/库存列 */
+.el-table .el-table__cell {
+  padding: 13px 0;
+  color: var(--s-ink-secondary);
+}
+
+/* ---------- 表单：聚焦光圈 + 标签弱化 ---------- */
+
+/* 输入框聚焦：indigo 描边 + 外圈柔光（Stripe focus ring） */
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--s-primary) inset,
+    0 0 0 3px rgba(83, 58, 255, 0.12) !important;
+}
+
+/* 标签：mute 色 + 300 字重，与输入内容拉开层级 */
+.el-form-item__label {
+  color: var(--s-ink-mute);
+  font-weight: 300;
+}
+
+/* 对话框：标题 300 字重 + 底部发丝线；内容区留白加大 */
+.el-dialog__title {
+  font-weight: 300;
+  font-size: 18px;
+  letter-spacing: -0.2px;
+  color: var(--s-ink);
+}
+.el-dialog__header {
+  border-bottom: 1px solid var(--s-hairline);
+  margin-right: 0;
+  padding-bottom: 14px;
+}
+
+/* 分页器：pill 化页码，选中态 indigo */
+.el-pagination.is-background .el-pager li,
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .btn-next {
+  border-radius: 9999px;
+  background-color: var(--s-canvas);
+  border: 1px solid var(--s-hairline);
+  margin: 0 3px;
+}
+.el-pagination.is-background .el-pager li.is-active {
+  background-color: var(--s-primary);
+  border-color: var(--s-primary);
 }
 
 /* 输入框：6px 圆角 + hairline 边框 */
