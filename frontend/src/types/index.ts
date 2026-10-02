@@ -82,6 +82,8 @@ export interface AiSuggestion {
   product_id: string | null
   content: SuggestionContent
   rule_refs: string[]
+  /** 规则标题（后端随建议返回，展示用；旧数据无此字段） */
+  rule_titles?: string[]
   status: 'pending' | 'accepted' | 'dismissed'
   created_at: string
 }

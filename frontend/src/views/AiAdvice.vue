@@ -68,13 +68,18 @@
         </div>
         <!-- 按 type 渲染建议内容 -->
         <template v-if="s.type === 'restock'">
-          <p>建议补货 <b>{{ s.content.quantity }}</b> 件（优先级：{{ s.content.priority }}）</p>
+          <!-- quantity=0 无行动价值 → 转译为"库存充足"提示，
+               避免"建议补货 0 件 + low/none"的歧义展示 -->
+          <p v-if="!s.content.quantity">库存充足，暂无需补货</p>
+          <p v-else>建议补货 <b>{{ s.content.quantity }}</b> 件（优先级：{{ s.content.priority }}）</p>
         </template>
         <template v-else>
           <p>建议售价 <b>￥{{ s.content.suggested_price }}</b>（区间 {{ s.content.price_range?.[0] }} ~ {{ s.content.price_range?.[1] }}）</p>
         </template>
         <p class="sug-reason">{{ s.content.reason || s.content.strategy }}</p>
-        <p class="sug-refs" v-if="s.rule_refs?.length">引用规则：{{ s.rule_refs.length }} 条</p>
+        <!-- 优先展示规则标题（UUID 对运营者无可读性），旧数据降级为条数 -->
+        <p class="sug-refs" v-if="s.rule_titles?.length">引用规则：{{ s.rule_titles.join('、') }}</p>
+        <p class="sug-refs" v-else-if="s.rule_refs?.length">引用规则：{{ s.rule_refs.length }} 条</p>
       </div>
     </el-card>
 
@@ -255,6 +260,8 @@ interface SuggestionView {
   type: 'restock' | 'pricing' | 'alert'
   content: { quantity?: number; priority?: string; reason?: string; suggested_price?: number; price_range?: number[]; strategy?: string }
   rule_refs: string[]
+  /** 规则标题（新建议有；旧数据无 → 展示降级为条数） */
+  rule_titles?: string[]
   source?: 'ai' | 'rule'
   created_at: string
 }

@@ -15,18 +15,26 @@ from app.tasks.celery_app import celery_app
 
 
 def _calc_restock(sales7: int, stock: int, safety_stock: int) -> dict:
-    """规则引擎计算补货建议（纯函数，便于测试）。"""
+    """规则引擎计算补货建议（纯函数，便于测试）。
+
+    priority 语义：high=缺货 / medium=需尽快补 / low=需补但可等 /
+    none=无需行动（quantity=0 时不用 low——low 会被误读为"少量补一点"）。
+    """
     quantity = max(0, int(sales7 * 1.2) + safety_stock - stock)
     if stock == 0:
         priority = "high"
     elif quantity > 0:
         priority = "medium"
     else:
-        priority = "low"
+        priority = "none"
     reason = (
         f"近7天出库{sales7}件，当前库存{stock}件"
         + (f"低于安全库存{safety_stock}件" if stock < safety_stock else "")
-        + (f"，建议补货{quantity}件" if quantity > 0 else "，暂不需要补货")
+        + (
+            f"，建议补货{quantity}件"
+            if quantity > 0
+            else f"，库存充足（{stock}件 ≥ 安全库存{safety_stock}件），无需补货"
+        )
     )
     return {"quantity": quantity, "priority": priority, "reason": reason}
 

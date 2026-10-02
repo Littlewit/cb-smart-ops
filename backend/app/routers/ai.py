@@ -109,6 +109,8 @@ async def advice(
             "type": payload.type,
             "content": outcome["content"],
             "rule_refs": outcome["rule_refs"],
+            # 规则标题：前端展示用（ref 是机器主键，对运营者无可读性）
+            "rule_titles": outcome.get("rule_titles", []),
             "source": outcome["source"],
         }
     )

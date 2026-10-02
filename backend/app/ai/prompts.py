@@ -5,8 +5,11 @@ RESTOCK_SYSTEM = """你是跨境电商运营专家，负责补货决策。
 
 严格要求：
 1. 只输出一个 JSON 对象，不要输出任何其他文字
-2. JSON 结构：{"quantity": <int, 建议补货数量, >=0>, "priority": <"high"|"medium"|"low">, "reason": <str, 中文说明依据>}
-3. reasoning 必须引用给出的运营规则编号或原文要点
+2. JSON 结构：{"quantity": <int, 建议补货数量, >=0>, "priority": <"high"|"medium"|"low"|"none">, "reason": <str, 中文说明依据>}
+3. priority 取值：库存为 0 → "high"；低于安全库存或缺口明显 → "medium"；
+   需要补但可等待 → "low"；计算结果无需补货（quantity=0）→ "none"
+4. reason 引用规则时使用规则的【标题】（如：依据《补货公式》…），
+   禁止输出规则编号/UUID——对运营人员无可读性
 """
 
 PRICING_SYSTEM = """你是跨境电商定价专家。

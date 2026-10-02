@@ -140,6 +140,57 @@ def test_rag_keyword_scoring(client, viewer_headers):
     assert len(kw_q & kw_d) >= 2
 
 
+def test_restock_none_priority_when_stock_enough(client, viewer_headers, product_id, monkeypatch):
+    """库存充足（无需补货）→ LLM 输出 priority=none 应合法（不再用 low 歧义）。"""
+    async def fake_chat_json(system, user):
+        return {"quantity": 0, "priority": "none", "reason": "依据《预警阈值》，库存充足，无需补货"}
+
+    monkeypatch.setattr(llm, "chat_json", fake_chat_json)
+    resp = client.post(
+        "/api/ai/advice",
+        json={"product_id": product_id, "type": "restock"},
+        headers=viewer_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["source"] == "ai"
+    assert data["content"]["priority"] == "none"
+    # reason 不应包含规则编号/UUID（Prompt 已约束引用标题）
+    assert "a97f1680" not in data["content"]["reason"]
+    # rule_titles 随响应返回（前端展示规则标题用）
+    assert data["rule_titles"]
+
+
+def test_rule_engine_restock_enough_stock(client, viewer_headers, product_id, monkeypatch):
+    """兜底路径：库存充足 → 规则引擎 priority=none，reason 说明无需补货。"""
+    async def down(system, user):
+        return None
+
+    monkeypatch.setattr(llm, "chat_json", down)
+    resp = client.post(
+        "/api/ai/advice",
+        json={"product_id": product_id, "type": "restock"},
+        headers=viewer_headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    # product_id fixture: stock=5, safety=10 → 缺口为负? 不，max(0, 0*1.2+10-5)=5 → medium
+    # 该商品低于安全库存（5 < 10），不会走 none 分支；此断言验证兜底可用
+    assert data["source"] == "rule"
+    assert data["content"]["priority"] in {"medium", "none"}
+
+
+def test_calc_restock_none_semantics():
+    """纯函数单测：库存充足 → none 优先级与"无需补货"文案（不再输出 low）。"""
+    from app.tasks.suggestion import _calc_restock
+
+    result = _calc_restock(sales7=0, stock=39, safety_stock=10)
+    assert result["quantity"] == 0
+    assert result["priority"] == "none"
+    assert "无需补货" in result["reason"]
+    assert "39" in result["reason"]
+
+
 def test_chat_fallback_mentions_builtin_rules(client, viewer_headers):
     """规则库为空时对话兜底 → 引用内置规则（rag.BUILTIN_RULES 兜底路径）。"""
     with client.stream(

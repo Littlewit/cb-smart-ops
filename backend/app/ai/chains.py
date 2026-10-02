@@ -17,8 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai import llm, prompts, rag
 from app.models import InventoryLog, Product
 
-# 补货建议 JSON 的合法取值约束
-_VALID_PRIORITIES = {"high", "medium", "low"}
+# 补货建议 JSON 的合法取值约束；"none" 表示无需行动（quantity=0 时 low 会有
+# "少量补一点"的歧义，语义上必须与"要做但不急"区分开）
+_VALID_PRIORITIES = {"high", "medium", "low", "none"}
 
 
 def _valid_restock(result: dict) -> bool:
@@ -88,7 +89,13 @@ async def restock_chain(db: AsyncSession, product: Product) -> dict:
     result = await llm.chat_json(prompts.RESTOCK_SYSTEM, user_msg)
 
     if result is not None and _valid_restock(result):
-        return {"content": result, "rule_refs": [r["id"] for r in rules], "source": "ai"}
+        return {
+            "content": result,
+            "rule_refs": [r["id"] for r in rules],
+            # 标题单独返回供前端展示：reason 里约束引用标题，但兜底路径无 LLM 润色
+            "rule_titles": [r["title"] for r in rules],
+            "source": "ai",
+        }
 
     # 兜底：规则引擎公式（与 Celery 建议任务同一实现，保证口径一致）
     from app.tasks.suggestion import _calc_restock
@@ -97,6 +104,7 @@ async def restock_chain(db: AsyncSession, product: Product) -> dict:
     return {
         "content": fallback,
         "rule_refs": ["builtin-restock-formula"],
+        "rule_titles": ["内置补货公式"],
         "source": "rule",
     }
 
@@ -116,7 +124,12 @@ async def pricing_chain(db: AsyncSession, product: Product) -> dict:
     result = await llm.chat_json(prompts.PRICING_SYSTEM, user_msg)
 
     if result is not None and _valid_pricing(result):
-        return {"content": result, "rule_refs": [r["id"] for r in rules], "source": "ai"}
+        return {
+            "content": result,
+            "rule_refs": [r["id"] for r in rules],
+            "rule_titles": [r["title"] for r in rules],
+            "source": "ai",
+        }
 
     # 兜底：定价公式 max(成本×1.35, 竞品均价×0.95)，尾数取 .9
     avg_comp = sum(comp) / len(comp)
@@ -131,5 +144,6 @@ async def pricing_chain(db: AsyncSession, product: Product) -> dict:
             "competitor_prices": comp,
         },
         "rule_refs": ["builtin-pricing"],
+        "rule_titles": ["内置定价公式"],
         "source": "rule",
     }
