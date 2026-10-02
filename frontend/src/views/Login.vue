@@ -80,7 +80,9 @@ async function onLogin(): Promise<void> {
       role: decodeRole(data.access_token),
     })
     ElMessage.success('登录成功')
-    router.push((route.query.redirect as string) || '/')
+    // sanitize：redirect 可能是历史嵌套产生的 /login?...，直接回首页
+    const redirect = (route.query.redirect as string) || '/'
+    router.push(redirect.startsWith('/login') ? '/' : redirect)
   } finally {
     loading.value = false
   }

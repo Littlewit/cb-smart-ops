@@ -44,11 +44,22 @@ request.interceptors.response.use(
     const detail = error.response?.data?.detail || error.message
 
     if (status === 401) {
-      // Token 缺失/过期：清登录态回登录页（带 redirect 以便登录后跳回）
+      // 区分两种 401：登录接口的"密码错误" ≠ 会话过期
+      // （否则登录页会触发 logout+跳转，redirect 查询参数层层嵌套）
+      const isLoginRequest = error.config?.url?.includes('/auth/login')
+      if (isLoginRequest) {
+        ElMessage.error(detail)
+        return Promise.reject(error)
+      }
+
+      // 会话过期：清登录态回登录页；已在登录页时不重复跳转（避免 redirect 嵌套）
       const auth = useAuthStore()
+      const current = router.currentRoute.value
       auth.logout()
-      ElMessage.warning('登录已过期，请重新登录')
-      router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } })
+      if (current.path !== '/login') {
+        ElMessage.warning('登录已过期，请重新登录')
+        router.push({ path: '/login', query: { redirect: current.fullPath } })
+      }
     } else {
       ElMessage.error(detail)
     }
