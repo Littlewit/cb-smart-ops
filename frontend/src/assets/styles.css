@@ -103,8 +103,6 @@ body,
   --el-table-border-color: var(--s-hairline); /* 行分隔用发丝线 */
 
   border: 1px solid var(--s-hairline);        /* 外边框 */
-  border-radius: 12px;
-  overflow: hidden;                           /* 圆角裁切内部单元格 */
 }
 
 /* 单元格只保留横向分隔线（竖线不加，保持横向数据表风格） */
