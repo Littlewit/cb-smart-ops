@@ -142,7 +142,7 @@ const query = reactive<{ q: string; shop_id: string; alert: boolean | null; page
   shop_id: '',
   alert: null,
   page: 1,
-  page_size: 20,
+  page_size: 10,
 })
 
 const dialogVisible = ref(false)

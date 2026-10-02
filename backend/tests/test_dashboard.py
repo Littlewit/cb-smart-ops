@@ -22,3 +22,13 @@ def test_dashboard_stats(client, admin_headers, operator_headers):
     assert len(data["sales_trend"]) == 7  # 连续 7 天，无订单日补 0
     assert all("date" in d and "amount" in d for d in data["sales_trend"])
     assert data["shop_distribution"] == [{"shop": "看板店", "product_count": 1}]
+
+
+def test_dashboard_stats_days_param(client, admin_headers):
+    """趋势天数参数：days=30 返回 30 天；非法值（<7）被 422 拒绝。"""
+    resp = client.get("/api/dashboard/stats?days=30", headers=admin_headers)
+    assert resp.status_code == 200
+    assert len(resp.json()["data"]["sales_trend"]) == 30
+
+    resp = client.get("/api/dashboard/stats?days=3", headers=admin_headers)
+    assert resp.status_code == 422

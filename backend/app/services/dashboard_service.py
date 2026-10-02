@@ -11,8 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Order, Product, Shop
 
 
-async def stats(db: AsyncSession) -> dict:
-    """看板统计数据（对应前端 Dashboard.vue 的三种图/卡片）。"""
+async def stats(db: AsyncSession, days: int = 7) -> dict:
+    """看板统计数据（对应前端 Dashboard.vue 的三种图/卡片）。
+
+    days：销售趋势天数（7/30），由前端筛选 pill 传入。
+    """
     # ---------- 指标卡片 ----------
     total_products = (await db.execute(select(func.count(Product.id)))).scalar_one()
     alert_count = (
@@ -20,8 +23,8 @@ async def stats(db: AsyncSession) -> dict:
     ).scalar_one()
     total_shops = (await db.execute(select(func.count(Shop.id)))).scalar_one()
 
-    # ---------- 近 7 天销售趋势 ----------
-    week_ago = datetime.now() - timedelta(days=7)
+    # ---------- 近 N 天销售趋势 ----------
+    since = datetime.now() - timedelta(days=days)
     # func.date() 双方言兼容：SQLite date(ts) 与 PG date(timestamp) 均返回 YYYY-MM-DD
     # （不能用 substr(timestamp)：PG 的 substr 不接受 timestamp 类型）
     rows = (
@@ -30,15 +33,15 @@ async def stats(db: AsyncSession) -> dict:
                 func.date(Order.created_at).label("date"),
                 func.coalesce(func.sum(Order.amount), 0).label("amount"),
             )
-            .where(Order.created_at >= week_ago)
+            .where(Order.created_at >= since)
             .group_by(func.date(Order.created_at))
             .order_by(func.date(Order.created_at))
         )
     ).all()
-    # 补齐 7 天连续日期（无订单的天填 0，保证折线不断）
+    # 补齐 N 天连续日期（无订单的天填 0，保证折线不断）
     amount_by_date = {r.date: float(r.amount) for r in rows}
     sales_trend = []
-    for i in range(6, -1, -1):
+    for i in range(days - 1, -1, -1):
         day = datetime.now() - timedelta(days=i)
         key = day.strftime("%Y-%m-%d")
         sales_trend.append({"date": key[5:], "amount": amount_by_date.get(key, 0.0)})

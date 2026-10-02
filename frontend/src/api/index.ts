@@ -5,6 +5,7 @@
 import request from '@/api/request'
 import type {
   AiSuggestion,
+  DashboardStats,
   InventoryLog,
   InventorySummary,
   PagedData,
@@ -64,10 +65,9 @@ export const inventoryApi = {
 }
 
 // ---------- 看板 ----------
-import type { DashboardStats } from '@/types'
-
 export const dashboardApi = {
-  stats: () => request.get<DashboardStats>('/dashboard/stats'),
+  stats: (params?: { days?: number }) =>
+    request.get<DashboardStats>('/dashboard/stats', { params }),
 }
 
 // ---------- AI ----------

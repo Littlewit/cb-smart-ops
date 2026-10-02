@@ -47,7 +47,15 @@
             <div class="chart-title">近 7 天销售额趋势</div>
             <div class="chart-subtitle">单位：元 · 最近 7 天</div>
           </div>
-          <div class="chart-filter">近 7 天 ▾</div>
+          <el-dropdown trigger="click" @command="onFilterChange">
+            <span class="chart-filter">近 {{ trendDays }} 天 ▾</span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item :command="7">近 7 天</el-dropdown-item>
+                <el-dropdown-item :command="30">近 30 天</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
         <div ref="trendRef" class="chart-box"></div>
       </div>
@@ -104,10 +112,11 @@ const PIE_PALETTE: [string, string][] = [
   ['#8b5cf6', '#d946ef'],
 ]
 
-/** 渲染销售趋势折线图：渐变线条 + 渐变面积 + 白描圆点 */
+/** 渲染销售趋势折线图：渐变线条 + 渐变面积 + 白描圆点。
+ *  已有实例时只 setOption 更新数据（切换天数时不重复 init）。 */
 function renderTrend(trend: DashboardStats['sales_trend']): void {
   if (!trendRef.value) return
-  trendChart = echarts.init(trendRef.value)
+  if (!trendChart) trendChart = echarts.init(trendRef.value)
   trendChart.setOption({
     grid: { left: 55, right: 30, top: 20, bottom: 40 },
     tooltip: {
@@ -201,11 +210,26 @@ const onResize = (): void => {
   pieChart?.resize()
 }
 
-onMounted(async () => {
-  stats.value = await dashboardApi.stats()
+// 当前趋势天数（筛选 pill 切换 7/30）
+const trendDays = ref<number>(7)
+
+async function loadStats(): Promise<void> {
+  stats.value = await dashboardApi.stats({ days: trendDays.value })
   renderTrend(stats.value.sales_trend || [])
-  renderPie(stats.value.shop_distribution || [])
-  window.addEventListener('resize', onResize)
+}
+
+/** 切换趋势天数：重拉 stats 并仅更新折线图数据 */
+async function onFilterChange(days: number): Promise<void> {
+  trendDays.value = days
+  await loadStats()
+}
+
+onMounted(() => {
+  void (async () => {
+    await loadStats()
+    renderPie(stats.value.shop_distribution || [])
+    window.addEventListener('resize', onResize)
+  })()
 })
 
 onUnmounted(() => {
