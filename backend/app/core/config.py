@@ -28,7 +28,10 @@ class Settings(BaseSettings):
     credential_encrypt_key: str = "change-me-32bytes"
 
     deepseek_api_key: str = ""
-    # false 时 AI 接口全部走规则引擎兜底
+    # DeepSeek 使用 OpenAI 兼容协议；官方端点与默认对话模型
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-chat"
+    # false（或未配置 api_key）时 AI 接口全部走规则引擎兜底
     ai_enabled: bool = True
 
     mock_platform_url: str = "http://127.0.0.1:8001"
