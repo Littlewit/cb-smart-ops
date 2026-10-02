@@ -1,5 +1,21 @@
 """认证与 RBAC 测试：注册/登录/角色权限边界。"""
 
+from app.core import captcha as captcha_mod
+
+
+def _login(client, username: str, password: str):
+    """带图形验证码的登录辅助（测试通过 issue() 获取明文答案）。"""
+    captcha_id, captcha_code, _ = captcha_mod.issue()
+    return client.post(
+        "/api/auth/login",
+        json={
+            "username": username,
+            "password": password,
+            "captcha_id": captcha_id,
+            "captcha_code": captcha_code,
+        },
+    )
+
 
 def test_register_and_login(client):
     # 注册 → 201，返回用户信息（不含密码哈希）
@@ -19,9 +35,7 @@ def test_register_and_login(client):
     assert "password" not in data and "password_hash" not in data
 
     # 登录 → 返回 JWT
-    resp = client.post(
-        "/api/auth/login", json={"username": "alice", "password": "Passw0rd!"}
-    )
+    resp = _login(client, "alice", "Passw0rd!")
     assert resp.status_code == 200
     assert resp.json()["data"]["access_token"]
 
@@ -49,9 +63,7 @@ def test_login_wrong_password(client):
         },
     )
     # 错误密码 → 401（不区分"用户不存在"与"密码错误"，防枚举）
-    resp = client.post(
-        "/api/auth/login", json={"username": "carol", "password": "Wrong999!"}
-    )
+    resp = _login(client, "carol", "Wrong999!")
     assert resp.status_code == 401
 
 
@@ -82,14 +94,8 @@ def test_reset_password_flow(client):
     assert resp.status_code == 200
 
     # 旧密码失效、新密码可登录
-    assert (
-        client.post("/api/auth/login", json={"username": "dave", "password": "Passw0rd!"}).status_code
-        == 401
-    )
-    assert (
-        client.post("/api/auth/login", json={"username": "dave", "password": "New99999!"}).status_code
-        == 200
-    )
+    assert _login(client, "dave", "Passw0rd!").status_code == 401
+    assert _login(client, "dave", "New99999!").status_code == 200
 
 
 def test_change_password_requires_old_password(client, operator_headers):
@@ -109,10 +115,7 @@ def test_change_password_requires_old_password(client, operator_headers):
     assert resp.status_code == 200
 
     # 新密码登录成功（注意：旧 JWT 仍有效至过期，无黑名单机制，演示级取舍）
-    resp = client.post(
-        "/api/auth/login",
-        json={"username": "operator_user", "password": "New88888!"},
-    )
+    resp = _login(client, "operator_user", "New88888!")
     assert resp.status_code == 200
 
 

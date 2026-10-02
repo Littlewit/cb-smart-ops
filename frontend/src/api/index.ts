@@ -23,8 +23,15 @@ export interface LoginResult {
 export const authApi = {
   register: (payload: { username: string; password: string; email: string; role: string }) =>
     request.post('/auth/register', payload),
-  login: (payload: { username: string; password: string }) =>
-    request.post<LoginResult>('/auth/login', payload),
+  login: (payload: {
+    username: string
+    password: string
+    captcha_id: string
+    captcha_code: string
+  }) => request.post<LoginResult>('/auth/login', payload),
+  /** 图形验证码：返回 captcha_id 与 base64 PNG（登录时一次性校验） */
+  captcha: () =>
+    request.get<{ captcha_id: string; image: string }>('/auth/captcha'),
   /** 忘记密码：用户名+注册邮箱 匹配后重置（公开接口，演示级无邮件验证码） */
   resetPassword: (payload: { username: string; email: string; new_password: string }) =>
     request.post('/auth/reset-password', payload),

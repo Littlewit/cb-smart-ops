@@ -19,8 +19,12 @@ class UserCreate(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    """登录请求：需携带图形验证码（GET /api/auth/captcha 签发，一次性）。"""
+
     username: str
     password: str
+    captcha_id: str = Field(min_length=1, description="验证码签发 ID")
+    captcha_code: str = Field(min_length=1, max_length=8, description="用户输入的验证码")
 
 
 class ResetPasswordRequest(BaseModel):

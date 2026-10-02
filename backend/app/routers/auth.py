@@ -1,8 +1,9 @@
-"""认证路由：注册 / 登录 / 忘记密码重置（公开）+ 修改密码（需登录）。"""
+"""认证路由：注册 / 登录（图形验证码）/ 忘记密码重置（公开）+ 修改密码（需登录）。"""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import captcha
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.core.response import ok
@@ -19,6 +20,16 @@ from app.services import auth_service
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+@router.get("/captcha")
+async def get_captcha():
+    """获取图形验证码：返回 captcha_id 与 base64 PNG 图片。
+
+    登录时必须回传 captcha_id + 用户输入（一次性校验，防暴力破解）。
+    """
+    captcha_id, _, image_b64 = captcha.issue()
+    return ok({"captcha_id": captcha_id, "image": f"data:image/png;base64,{image_b64}"})
+
+
 @router.post("/register", status_code=201)
 async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     """注册用户：用户名唯一，密码仅接收明文并立即哈希。"""
@@ -28,7 +39,12 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.post("/login")
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
-    """登录：成功返回 JWT（前端存 Pinia + localStorage，请求头携带）。"""
+    """登录：先校验图形验证码（一次性），再验证账密返回 JWT。
+
+    验证码失败统一 400 且不透漏具体原因细节（过期/错误对用户展示同一文案）。
+    """
+    if not captcha.verify(payload.captcha_id, payload.captcha_code):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "验证码错误或已过期")
     token = await auth_service.login(db, payload)
     return ok({"access_token": token, "token_type": "bearer"})
 

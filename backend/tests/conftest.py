@@ -13,7 +13,13 @@ TEST_PASSWORD = "Passw0rd!"
 
 
 def make_auth_headers(client: TestClient, username: str, role: str) -> dict:
-    """注册 + 登录，返回带 JWT 的请求头（每个测试库独立，用户名可固定）。"""
+    """注册 + 登录，返回带 JWT 的请求头（每个测试库独立，用户名可固定）。
+
+    登录需图形验证码：测试通过 captcha.issue() 直接获取明文答案
+    （与被测代码同进程，等价于"人类看到了图片"）。
+    """
+    from app.core import captcha as captcha_mod
+
     resp = client.post(
         "/api/auth/register",
         json={
@@ -24,8 +30,15 @@ def make_auth_headers(client: TestClient, username: str, role: str) -> dict:
         },
     )
     assert resp.status_code == 201, resp.text
+    captcha_id, captcha_code, _ = captcha_mod.issue()
     resp = client.post(
-        "/api/auth/login", json={"username": username, "password": TEST_PASSWORD}
+        "/api/auth/login",
+        json={
+            "username": username,
+            "password": TEST_PASSWORD,
+            "captcha_id": captcha_id,
+            "captcha_code": captcha_code,
+        },
     )
     assert resp.status_code == 200, resp.text
     token = resp.json()["data"]["access_token"]

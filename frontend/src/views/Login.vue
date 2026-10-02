@@ -3,13 +3,25 @@
     <el-card class="login-card">
       <h2 class="title">跨境电商 AI 辅助运营系统</h2>
 
-      <!-- 登录主表单（注册/忘记密码均改为弹窗入口） -->
+      <!-- 登录主表单（注册/忘记密码均为弹窗入口；登录需图形验证码防暴力破解） -->
       <el-form :model="loginForm" @keyup.enter="onLogin">
         <el-form-item>
           <el-input v-model="loginForm.username" placeholder="用户名" />
         </el-form-item>
         <el-form-item>
           <el-input v-model="loginForm.password" type="password" placeholder="密码" show-password />
+        </el-form-item>
+        <el-form-item>
+          <div class="captcha-row">
+            <el-input
+              v-model="loginForm.captcha_code"
+              placeholder="验证码"
+              maxlength="4"
+              @keyup.enter="onLogin"
+            />
+            <!-- 点击图片刷新验证码；一次性校验，失败后也需刷新 -->
+            <img :src="captchaImg" class="captcha-img" title="点击刷新" alt="验证码" @click="refreshCaptcha" />
+          </div>
         </el-form-item>
         <el-button type="primary" style="width: 100%" :loading="loading" @click="onLogin">
           登 录
@@ -77,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '@/api'
@@ -90,7 +102,21 @@ const route = useRoute()
 const auth = useAuthStore()
 
 const loading = ref(false)
-const loginForm = reactive({ username: '', password: '' })
+// captcha_id/captcha_code 随表单整体提交给登录接口（见 onLogin）
+const loginForm = reactive({ username: '', password: '', captcha_id: '', captcha_code: '' })
+const captchaImg = ref('')
+
+/** 拉取新验证码（base64 PNG）；失败静默——登录时后端会拦截并提示 */
+async function refreshCaptcha(): Promise<void> {
+  try {
+    const data = await authApi.captcha()
+    loginForm.captcha_id = data.captcha_id
+    captchaImg.value = data.image
+    loginForm.captcha_code = ''
+  } catch {
+    /* 忽略：下次登录时后端会兜底校验 */
+  }
+}
 const regVisible = ref(false)
 const resetVisible = ref(false)
 const regForm = reactive<{ username: string; password: string; email: string; role: Role }>({
@@ -100,6 +126,8 @@ const regForm = reactive<{ username: string; password: string; email: string; ro
   role: 'operator',
 })
 const resetForm = reactive({ username: '', email: '', new_password: '' })
+
+onMounted(refreshCaptcha)
 
 /** 从 JWT payload 中解出 role（客户端解码仅用于菜单显示，安全边界在后端 RBAC） */
 function roleFromToken(token: string): Role {
@@ -119,10 +147,17 @@ async function onLogin(): Promise<void> {
     ElMessage.warning('请输入用户名和密码')
     return
   }
+  if (!loginForm.captcha_code) {
+    ElMessage.warning('请输入验证码')
+    return
+  }
   loading.value = true
   try {
     const data = await authApi.login(loginForm)
     finishLogin(data.access_token, loginForm.username)
+  } catch {
+    // 验证码为一次性消费：无论账密对错，失败后必须刷新验证码重输
+    await refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -199,5 +234,14 @@ async function onReset(): Promise<void> {
   display: flex;
   justify-content: space-between;
   margin-top: 14px;
+}
+/* 验证码行：输入框与图片等高排列，图片可点击刷新 */
+.captcha-row { display: flex; gap: 10px; align-items: center; width: 100%; }
+.captcha-img {
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--s-hairline);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 </style>
