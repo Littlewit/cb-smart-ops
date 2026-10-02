@@ -36,7 +36,7 @@
           <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
         </el-table-column>
         <el-table-column prop="type" label="类型" width="70">
-          <template #default="{ row }">
+          <template #default="{ row }: { row: InventoryLog }">
             <el-tag size="small" :type="{ in: 'success', out: 'danger', check: 'info' }[row.type]">
               {{ { in: '入库', out: '出库', check: '盘点' }[row.type] }}
             </el-tag>
@@ -74,44 +74,55 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { inventoryApi } from '../api'
 import { useAuthStore } from '../stores/auth'
+import type { InventoryLog, InventorySummary, Product } from '../types'
 
 const auth = useAuthStore()
 const canWrite = computed(() => ['admin', 'operator'].includes(auth.role))
 
-const summary = ref({ total_products: 0, alert_count: 0, total_shops: 0, alert_products: [] })
+const summary = ref<InventorySummary>({
+  total_products: 0,
+  alert_count: 0,
+  total_shops: 0,
+  alert_products: [],
+})
 const logsVisible = ref(false)
-const logs = ref([])
-const currentProduct = ref(null)
+const logs = ref<InventoryLog[]>([])
+const currentProduct = ref<Product | null>(null)
 const opVisible = ref(false)
-const opForm = reactive({ type: 'in', quantity: 0, reason: '' })
+const opForm = reactive<{ type: 'in' | 'out' | 'check'; quantity: number; reason: string }>({
+  type: 'in',
+  quantity: 0,
+  reason: '',
+})
 
-const formatTime = (iso) => (iso ? iso.replace('T', ' ').slice(0, 19) : '')
+const formatTime = (iso: string): string => (iso ? iso.replace('T', ' ').slice(0, 19) : '')
 
-async function load() {
+async function load(): Promise<void> {
   summary.value = await inventoryApi.summary()
 }
 
 /** 点击预警行 → 打开该商品流水抽屉 */
-async function openLogs(row) {
+async function openLogs(row: Product): Promise<void> {
   currentProduct.value = row
   const data = await inventoryApi.listLogs({ product_id: row.id, page: 1, page_size: 50 })
   logs.value = data.items
   logsVisible.value = true
 }
 
-function openOp(row) {
+function openOp(row: Product): void {
   currentProduct.value = row
   Object.assign(opForm, { type: 'in', quantity: 0, reason: '' })
   opVisible.value = true
 }
 
 /** 提交入库/出库/盘点：余额与流水由后端同事务保证 */
-async function submitOp() {
+async function submitOp(): Promise<void> {
+  if (!currentProduct.value) return
   await inventoryApi.createLog({ product_id: currentProduct.value.id, ...opForm })
   ElMessage.success('操作成功')
   opVisible.value = false

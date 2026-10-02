@@ -42,7 +42,7 @@
   </el-container>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -52,10 +52,10 @@ const router = useRouter()
 
 // 角色中文标签
 const roleLabel = computed(
-  () => ({ admin: '管理员', operator: '运营', viewer: '查看' }[auth.role] || auth.role)
+  () => ({ admin: '管理员', operator: '运营', viewer: '查看' })[auth.role] || auth.role
 )
 
-function onLogout() {
+function onLogout(): void {
   auth.logout()
   router.push('/login')
 }

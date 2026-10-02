@@ -16,25 +16,34 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 import { dashboardApi } from '../api'
+import type { DashboardStats } from '../types'
 
-const stats = ref({ total_products: 0, alert_count: 0, total_shops: 0, sales_trend: [], shop_distribution: [] })
+const stats = ref<DashboardStats>({
+  total_products: 0,
+  alert_count: 0,
+  total_shops: 0,
+  sales_trend: [],
+  shop_distribution: [],
+})
 
 // 近7天销售额合计（指标卡片）
-const totalSales = computed(() =>
+const totalSales = computed<number>(() =>
   (stats.value.sales_trend || []).reduce((sum, d) => sum + Number(d.amount || 0), 0)
 )
 
-const trendRef = ref(null)
-const pieRef = ref(null)
-let trendChart = null
-let pieChart = null
+const trendRef = ref<HTMLElement | null>(null)
+const pieRef = ref<HTMLElement | null>(null)
+// echarts 实例类型：init 返回 ECharts | undefined
+let trendChart: echarts.ECharts | null = null
+let pieChart: echarts.ECharts | null = null
 
 /** 渲染销售趋势折线图（窗口尺寸变化时自适应） */
-function renderTrend(trend) {
+function renderTrend(trend: DashboardStats['sales_trend']): void {
+  if (!trendRef.value) return
   trendChart = echarts.init(trendRef.value)
   trendChart.setOption({
     title: { text: '近 7 天销售额趋势', left: 'center', textStyle: { fontSize: 14 } },
@@ -46,7 +55,8 @@ function renderTrend(trend) {
 }
 
 /** 渲染店铺商品分布饼图 */
-function renderPie(dist) {
+function renderPie(dist: DashboardStats['shop_distribution']): void {
+  if (!pieRef.value) return
   pieChart = echarts.init(pieRef.value)
   pieChart.setOption({
     title: { text: '各店铺商品分布', left: 'center', textStyle: { fontSize: 14 } },
@@ -62,7 +72,10 @@ function renderPie(dist) {
 }
 
 // 窗口缩放时重算图表尺寸
-const onResize = () => { trendChart?.resize(); pieChart?.resize() }
+const onResize = (): void => {
+  trendChart?.resize()
+  pieChart?.resize()
+}
 
 onMounted(async () => {
   stats.value = await dashboardApi.stats()

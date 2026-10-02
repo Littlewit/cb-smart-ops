@@ -33,9 +33,9 @@
           <el-tag size="small" :type="s.type === 'restock' ? 'warning' : 'primary'">
             {{ s.type === 'restock' ? '补货' : '定价' }}
           </el-tag>
-          <!-- 来源徽标：ai=大模型生成 / rule=规则引擎兜底 -->
-          <el-tag size="small" :type="s.source === 'ai' || isAiContent(s) ? 'success' : 'info'" effect="plain">
-            {{ s.source === 'rule' || (!s.source && !isAiContent(s)) ? '规则引擎' : 'DeepSeek' }}
+          <!-- 来源徽标：规则引擎兜底建议无 source 字段 -->
+          <el-tag size="small" :type="s.source === 'ai' ? 'success' : 'info'" effect="plain">
+            {{ s.source === 'ai' ? 'DeepSeek' : '规则引擎' }}
           </el-tag>
           <span class="sug-time">{{ s.created_at?.slice(5, 16) }}</span>
         </div>
@@ -74,26 +74,37 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { aiApi, productsApi } from '../api'
+import type { AiSuggestion, Product } from '../types'
 
 // ---------- 对话（SSE 流式） ----------
-const messages = ref([{ role: 'ai', text: '你好！我是 AI 运营助手，可以询问库存、补货、定价问题。' }])
+interface ChatMessage {
+  role: 'user' | 'ai'
+  text: string
+  streaming?: boolean
+}
+
+const messages = ref<ChatMessage[]>([
+  { role: 'ai', text: '你好！我是 AI 运营助手，可以询问库存、补货、定价问题。' },
+])
 const input = ref('')
 const streaming = ref(false)
-const messagesRef = ref(null)
+const messagesRef = ref<HTMLElement | null>(null)
 
-const scrollBottom = () => nextTick(() => {
-  if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
-})
+// nextTick 返回 Promise，签名与其保持一致
+const scrollBottom = (): Promise<void> =>
+  nextTick(() => {
+    if (messagesRef.value) messagesRef.value.scrollTop = messagesRef.value.scrollHeight
+  })
 
 /**
  * 发送消息：fetch + ReadableStream 解析 SSE（EventSource 不支持 POST）。
  * 帧格式 data: {"delta": "..."}，结束帧 data: [DONE]。
  */
-async function onSend() {
+async function onSend(): Promise<void> {
   const text = input.value.trim()
   if (!text || streaming.value) return
   input.value = ''
@@ -101,12 +112,13 @@ async function onSend() {
 
   // 用户消息 + 占位的 AI 消息（streaming=true 显示光标动画）
   messages.value.push({ role: 'user', text })
-  const aiMsg = reactive({ role: 'ai', text: '', streaming: true })
+  const aiMsg = reactive<ChatMessage>({ role: 'ai', text: '', streaming: true })
   messages.value.push(aiMsg)
   scrollBottom()
 
   try {
-    const authStore = await import('../stores/auth').then((m) => m.useAuthStore())
+    const { useAuthStore } = await import('../stores/auth')
+    const authStore = useAuthStore()
     const resp = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: {
@@ -126,18 +138,18 @@ async function onSend() {
       if (done) break
       buffer += decoder.decode(value, { stream: true })
       const parts = buffer.split('\n\n')
-      buffer = parts.pop() // 最后一段可能不完整，留到下一轮
+      buffer = parts.pop() as string // 最后一段可能不完整，留到下一轮
       for (const part of parts) {
         if (!part.startsWith('data: ')) continue
         const payload = part.slice(6)
         if (payload === '[DONE]') continue
-        const { delta } = JSON.parse(payload)
+        const { delta } = JSON.parse(payload) as { delta: string }
         aiMsg.text += delta // 逐字追加，实现"打字机"效果
         scrollBottom()
       }
     }
   } catch (e) {
-    aiMsg.text += `\n[请求失败：${e.message}]`
+    aiMsg.text += `\n[请求失败：${(e as Error).message}]`
   } finally {
     aiMsg.streaming = false
     streaming.value = false
@@ -146,21 +158,31 @@ async function onSend() {
 }
 
 // ---------- 建议卡片流 ----------
-const suggestions = ref([])
-const products = ref([])
-const genVisible = ref(false)
-const generating = ref(false)
-const genForm = reactive({ product_id: '', type: 'restock' })
-
-/** 兼容字段：Day2 任务生成的建议无 source 字段，按 content 推断展示 */
-const isAiContent = (s) => !!(s.content?.strategy || '').includes('AI') || false
-
-async function loadSuggestions() {
-  const data = await aiApi.listSuggestions({ page: 1, page_size: 20 })
-  suggestions.value = data.items
+// 后端列表返回的是"内容 + 来源"扁平结构，与 AiSuggestion 略有差异，这里定义展示类型
+interface SuggestionView {
+  id: string
+  type: 'restock' | 'pricing' | 'alert'
+  content: { quantity?: number; priority?: string; reason?: string; suggested_price?: number; price_range?: number[]; strategy?: string }
+  rule_refs: string[]
+  source?: 'ai' | 'rule'
+  created_at: string
 }
 
-async function onGenerate() {
+const suggestions = ref<SuggestionView[]>([])
+const products = ref<Product[]>([])
+const genVisible = ref(false)
+const generating = ref(false)
+const genForm = reactive<{ product_id: string; type: 'restock' | 'pricing' }>({
+  product_id: '',
+  type: 'restock',
+})
+
+async function loadSuggestions(): Promise<void> {
+  const data = await aiApi.listSuggestions({ page: 1, page_size: 20 })
+  suggestions.value = data.items as unknown as SuggestionView[]
+}
+
+async function onGenerate(): Promise<void> {
   generating.value = true
   try {
     await aiApi.advice({ product_id: genForm.product_id, type: genForm.type })
@@ -172,11 +194,14 @@ async function onGenerate() {
   }
 }
 
-onMounted(async () => {
+// onMounted 回调需返回 void，异步逻辑收敛到 async 函数内
+onMounted(() => {
   loadSuggestions()
-  const data = await productsApi.list({ page: 1, page_size: 100 })
-  products.value = data.items
-  if (data.items.length) genForm.product_id = data.items[0].id
+  void (async () => {
+    const data = await productsApi.list({ page: 1, page_size: 100 })
+    products.value = data.items
+    if (data.items.length) genForm.product_id = data.items[0].id
+  })()
 })
 </script>
 

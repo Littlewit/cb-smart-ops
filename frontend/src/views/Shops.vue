@@ -51,25 +51,27 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { shopsApi } from '../api'
 import { useAuthStore } from '../stores/auth'
+import type { Shop } from '../types'
 
 const auth = useAuthStore()
 const isAdmin = computed(() => auth.role === 'admin')
 const canWrite = computed(() => ['admin', 'operator'].includes(auth.role))
 
-const shops = ref([])
+const shops = ref<Shop[]>([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const syncingId = ref('')
 const form = reactive({ platform: 'mock', name: '', credentials: '' })
 
-const platformLabel = (p) => ({ mock: 'Mock 演示', shein: 'SHEIN', shopify: 'Shopify' }[p] || p)
+const platformLabel = (p: string): string =>
+  ({ mock: 'Mock 演示', shein: 'SHEIN', shopify: 'Shopify' })[p] || p
 
-async function load() {
+async function load(): Promise<void> {
   loading.value = true
   try {
     shops.value = await shopsApi.list()
@@ -78,7 +80,7 @@ async function load() {
   }
 }
 
-async function onCreate() {
+async function onCreate(): Promise<void> {
   await shopsApi.create({ ...form })
   ElMessage.success('店铺已创建，凭证已加密存储')
   dialogVisible.value = false
@@ -90,7 +92,7 @@ async function onCreate() {
  * 一键同步：后端 Celery 任务（开发 eager 模式同步执行完才返回），
  * 完成后提示并让用户去商品页查看结果。
  */
-async function onSync(row) {
+async function onSync(row: Shop): Promise<void> {
   syncingId.value = row.id
   try {
     await shopsApi.sync(row.id)
@@ -101,7 +103,7 @@ async function onSync(row) {
 }
 
 /** 连通性测试：不抛错，返回 connected/disconnected */
-async function onTest(row) {
+async function onTest(row: Shop): Promise<void> {
   const result = await shopsApi.testConnection(row.id)
   if (result.status === 'connected') {
     ElMessage.success(`连接成功，拉到 ${result.product_count} 个商品`)
@@ -110,7 +112,7 @@ async function onTest(row) {
   }
 }
 
-async function onDelete(row) {
+async function onDelete(row: Shop): Promise<void> {
   await ElMessageBox.confirm(`确认删除店铺「${row.name}」？`, '删除确认', { type: 'warning' })
   await shopsApi.remove(row.id)
   ElMessage.success('已删除')

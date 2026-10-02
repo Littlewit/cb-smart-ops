@@ -5,8 +5,12 @@
  * 1. 请求拦截：从 auth store 注入 Authorization: Bearer <token>
  * 2. 响应拦截：{code,message,data} 成功包直接解包返回 data；
  *    401 清除登录态并跳转登录页；其他错误统一 ElMessage 提示后 reject
+ *
+ * 说明：后端统一响应包拦截器直接解包返回 data，因此这里把响应类型
+ * 断言为"解包后的数据"（Result<T>），调用方拿到的就是业务数据本身。
  */
 import axios from 'axios'
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '../router'
 import { useAuthStore } from '../stores/auth'
@@ -17,7 +21,7 @@ const request = axios.create({
 })
 
 // ---------- 请求拦截：注入 Token ----------
-request.interceptors.request.use((config) => {
+request.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const auth = useAuthStore()
   if (auth.token) {
     config.headers.Authorization = `Bearer ${auth.token}`
@@ -27,7 +31,7 @@ request.interceptors.request.use((config) => {
 
 // ---------- 响应拦截：解包 + 错误统一处理 ----------
 request.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse) => {
     const body = response.data
     // 成功包 {code:0, message, data} → 直接返回 data，业务代码零负担
     if (body && typeof body === 'object' && 'code' in body) {
@@ -52,4 +56,10 @@ request.interceptors.response.use(
   }
 )
 
-export default request
+/** 解包后的请求函数：调用方拿到的是业务数据 T 本身 */
+export default request as {
+  get: <T = unknown>(url: string, config?: object) => Promise<T>
+  post: <T = unknown>(url: string, data?: object, config?: object) => Promise<T>
+  put: <T = unknown>(url: string, data?: object, config?: object) => Promise<T>
+  delete: <T = unknown>(url: string, config?: object) => Promise<T>
+}

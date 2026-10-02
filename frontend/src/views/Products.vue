@@ -14,7 +14,7 @@
     </el-form>
 
     <!-- 商品表格：预警行红色高亮 -->
-    <el-table :data="items" v-loading="loading" :row-class-name="({ row }) => (row.alert_status ? 'alert-row' : '')">
+    <el-table :data="items" v-loading="loading" :row-class-name="rowClass">
       <el-table-column prop="sku" label="SKU" width="140" />
       <el-table-column prop="name" label="名称" min-width="160" />
       <el-table-column prop="cost_price" label="成本价" width="90" />
@@ -98,32 +98,46 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { productsApi, shopsApi } from '../api'
 import { useAuthStore } from '../stores/auth'
+import type { Product, Shop, SkuMapping } from '../types'
 
 const auth = useAuthStore()
 // operator 及以上才显示写操作（安全边界在后端，这里只是隐藏入口）
 const canWrite = computed(() => ['admin', 'operator'].includes(auth.role))
 
-const items = ref([])
-const shops = ref([])
+const items = ref<Product[]>([])
+const shops = ref<Shop[]>([])
 const total = ref(0)
 const loading = ref(false)
-const query = reactive({ q: '', shop_id: '', alert: null, page: 1, page_size: 20 })
+const query = reactive<{ q: string; shop_id: string; alert: boolean | null; page: number; page_size: number }>({
+  q: '',
+  shop_id: '',
+  alert: null,
+  page: 1,
+  page_size: 20,
+})
 
 const dialogVisible = ref(false)
 const editingId = ref('')
-const form = reactive({})
+// 表单字段：创建需要 shop_id/sku，编辑只更新其余字段
+const form = reactive<{
+  shop_id: string; sku: string; name: string;
+  cost_price: number; sale_price: number; stock: number; safety_stock: number
+}>({ shop_id: '', sku: '', name: '', cost_price: 0, sale_price: 0, stock: 0, safety_stock: 10 })
 
 const mappingVisible = ref(false)
 const mappingProductId = ref('')
-const mappings = ref([])
+const mappings = ref<SkuMapping[]>([])
 const mappingForm = reactive({ platform: 'shein', external_sku: '' })
 
-async function load() {
+/** 预警商品整行标红 */
+const rowClass = ({ row }: { row: Product }): string => (row.alert_status ? 'alert-row' : '')
+
+async function load(): Promise<void> {
   loading.value = true
   try {
     const data = await productsApi.list({ ...query })
@@ -134,27 +148,23 @@ async function load() {
   }
 }
 
-async function loadShops() {
+async function loadShops(): Promise<void> {
   shops.value = await shopsApi.list()
 }
 
-function resetForm() {
-  Object.assign(form, { shop_id: '', sku: '', name: '', cost_price: 0, sale_price: 0, stock: 0, safety_stock: 10 })
-}
-
-function openCreate() {
+function openCreate(): void {
   editingId.value = ''
-  resetForm()
+  Object.assign(form, { shop_id: '', sku: '', name: '', cost_price: 0, sale_price: 0, stock: 0, safety_stock: 10 })
   dialogVisible.value = true
 }
 
-function openEdit(row) {
+function openEdit(row: Product): void {
   editingId.value = row.id
   Object.assign(form, row)
   dialogVisible.value = true
 }
 
-async function onSubmit() {
+async function onSubmit(): Promise<void> {
   if (editingId.value) {
     // 编辑：仅提交可更新字段（shop_id/sku 创建后不可改）
     await productsApi.update(editingId.value, {
@@ -169,7 +179,7 @@ async function onSubmit() {
   load()
 }
 
-async function onDelete(row) {
+async function onDelete(row: Product): Promise<void> {
   await ElMessageBox.confirm(`确认删除商品 ${row.sku}？关联的流水/映射将一并删除`, '删除确认', { type: 'warning' })
   await productsApi.remove(row.id)
   ElMessage.success('已删除')
@@ -177,19 +187,19 @@ async function onDelete(row) {
 }
 
 // ---------- SKU 映射 ----------
-async function openMappings(row) {
+async function openMappings(row: Product): Promise<void> {
   mappingProductId.value = row.id
   mappings.value = await productsApi.listSkuMappings(row.id)
   mappingVisible.value = true
 }
 
-async function addMapping() {
+async function addMapping(): Promise<void> {
   await productsApi.addSkuMapping(mappingProductId.value, { ...mappingForm })
   mappings.value = await productsApi.listSkuMappings(mappingProductId.value)
   ElMessage.success('已添加')
 }
 
-async function removeMapping(row) {
+async function removeMapping(row: SkuMapping): Promise<void> {
   await productsApi.removeSkuMapping(mappingProductId.value, row.id)
   mappings.value = await productsApi.listSkuMappings(mappingProductId.value)
 }

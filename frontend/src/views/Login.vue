@@ -44,36 +44,29 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../api'
 import { useAuthStore } from '../stores/auth'
+import { decodeRole } from '../utils/jwt'
+import type { Role } from '../types'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-const tab = ref('login')
+const tab = ref<'login' | 'register'>('login')
 const loading = ref(false)
 const loginForm = reactive({ username: '', password: '' })
-const regForm = reactive({ username: '', password: '', role: 'operator' })
+const regForm = reactive<{ username: string; password: string; role: Role }>({
+  username: '',
+  password: '',
+  role: 'operator',
+})
 
-/**
- * 从 JWT payload 中解出 role（客户端解码仅用于菜单显示，
- * 安全边界在后端 RBAC —— 前端只做体验层控制）。
- */
-function decodeRole(token) {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload.role || 'viewer'
-  } catch {
-    return 'viewer'
-  }
-}
-
-async function onLogin() {
+async function onLogin(): Promise<void> {
   if (!loginForm.username || !loginForm.password) {
     ElMessage.warning('请输入用户名和密码')
     return
@@ -87,13 +80,13 @@ async function onLogin() {
       role: decodeRole(data.access_token),
     })
     ElMessage.success('登录成功')
-    router.push(route.query.redirect || '/')
+    router.push((route.query.redirect as string) || '/')
   } finally {
     loading.value = false
   }
 }
 
-async function onRegister() {
+async function onRegister(): Promise<void> {
   if (regForm.username.length < 3 || regForm.password.length < 6) {
     ElMessage.warning('用户名 ≥3 位，密码 ≥6 位')
     return

@@ -7,12 +7,23 @@
  * 注意：前端守卫仅做体验层菜单控制，安全边界在后端 RBAC（deps.require_role）。
  */
 import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import type { Role } from '../types'
 
 // 角色等级：与后端 ROLE_LEVELS 保持一致
-const ROLE_LEVELS = { viewer: 0, operator: 1, admin: 2 }
+const ROLE_LEVELS: Record<Role, number> = { viewer: 0, operator: 1, admin: 2 }
 
-const routes = [
+// 扩展 meta 类型：title 页面标题 / role 最低角色 / public 公开页
+declare module 'vue-router' {
+  interface RouteMeta {
+    title?: string
+    role?: Role
+    public?: boolean
+  }
+}
+
+const routes: RouteRecordRaw[] = [
   { path: '/login', component: () => import('../views/Login.vue'), meta: { public: true } },
   {
     path: '/',
