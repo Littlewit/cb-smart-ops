@@ -35,3 +35,5 @@ tmp/
 
 # Playwright CLI 本地数据
 .playwright-cli/
+# 根目录临时截图（调试产物，正式截图在 docs/ 下）
+/*.png
