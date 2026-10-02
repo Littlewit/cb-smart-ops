@@ -1,5 +1,7 @@
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vite'
+// 从 vitest/config 导入：其 UserConfig 含 test 字段（vite 的类型不含，会报未知属性）
+// 该包装完全兼容 Vite 原有能力，dev/build 行为不变
+import { defineConfig } from 'vitest/config'
 // Vue 单文件组件支持
 import vue from '@vitejs/plugin-vue'
 
