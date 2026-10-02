@@ -33,12 +33,17 @@
 
     <el-container>
       <el-header class="header">
-        <span class="title">{{ $route.meta.title || '' }}</span>
+        <!-- 面包屑：当前页面标题（设计稿 .breadcrumb） -->
+        <div class="breadcrumb">
+          <span class="current">{{ $route.meta.title || '' }}</span>
+        </div>
         <el-dropdown>
-          <span class="user">
-            {{ auth.username }}（{{ roleLabel }}）
-            <el-icon><ArrowDown /></el-icon>
-          </span>
+          <div class="user-info">
+            <!-- 渐变圆形头像：取用户名首字母 -->
+            <div class="user-avatar">{{ auth.username.charAt(0).toUpperCase() }}</div>
+            <span>{{ auth.username }}（{{ roleLabel }}）</span>
+            <el-icon :size="14"><ArrowDown /></el-icon>
+          </div>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item @click="onLogout">退出登录</el-dropdown-item>
@@ -177,18 +182,47 @@ function onLogout(): void {
   line-height: 1.4;
 }
 
+/* 顶栏：60px 毛玻璃（半透明白 + 背景模糊），设计稿 .topbar 令牌 */
 .header {
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--s-canvas);
-  border-bottom: 1px solid var(--s-hairline);
+  padding: 0 28px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e2e8f0;
 }
-.title {
-  font-weight: 300;
-  font-size: 18px;      /* heading-sm */
-  letter-spacing: -0.18px;
-  color: var(--s-ink);
+
+/* 面包屑：当前页标题加粗 */
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.breadcrumb .current { font-weight: 600; color: var(--s-ink); }
+.breadcrumb .sep { color: #cbd5e1; }
+
+/* 用户信息：悬浮浅灰底，渐变圆形头像取用户名首字母 */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--s-ink-secondary);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
 }
-.user { cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--s-ink-secondary); }
+.user-info:hover { background: #f1f5f9; }
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
 </style>

@@ -216,6 +216,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 销售额数值较长（¥+8位数字）：字号随视口自适应且禁止换行 */
+.stat-value {
+  font-size: clamp(19px, 1.9vw, 26px);
+  white-space: nowrap;
+}
+
 /* ===== 统计卡片（设计稿 .stat-card 令牌） ===== */
 .stat-row {
   display: grid;
