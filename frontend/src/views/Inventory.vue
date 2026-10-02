@@ -36,20 +36,21 @@
         </el-card>
       </el-col>
     </el-row>
-
-    <!-- 预警商品列表：红色高亮 + 操作入口 -->
-    <h4 class="section-title">库存预警商品（点击行查看流水）</h4>
-    <el-table :data="summary.alert_products" :row-class-name="() => 'alert-row'" @row-click="openLogs">
-      <el-table-column prop="sku" label="SKU" width="140" />
-      <el-table-column prop="name" label="名称" min-width="160" />
-      <el-table-column prop="stock" label="当前库存" width="100" />
-      <el-table-column prop="safety_stock" label="安全库存" width="100" />
-      <el-table-column label="操作" width="140">
-        <template #default="{ row }">
-          <el-button size="small" type="primary" v-if="canWrite" @click.stop="openOp(row)">入库/出库</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <el-card shadow="hover" style="margin-top: 16px">
+      <!-- 预警商品列表：红色高亮 + 操作入口 -->
+      <h4 class="section-title">库存预警商品（点击行查看流水）</h4>
+      <el-table :data="summary.alert_products" :row-class-name="() => 'alert-row'" @row-click="openLogs">
+        <el-table-column prop="sku" label="SKU" width="140" />
+        <el-table-column prop="name" label="名称" min-width="160" />
+        <el-table-column prop="stock" label="当前库存" width="100" align="center" />
+        <el-table-column prop="safety_stock" label="安全库存" width="100" align="center" />
+        <el-table-column label="操作" width="140" align="center">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" v-if="canWrite" @click.stop="openOp(row)">入库/出库</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
     <!-- 库存流水抽屉 -->
     <el-drawer v-model="logsVisible" :title="`库存流水 - ${currentProduct?.sku || ''}`" size="560px">
@@ -74,7 +75,7 @@
 
     <!-- 入库/出库/盘点 dialog -->
     <el-dialog v-model="opVisible" :title="`库存操作 - ${currentProduct?.sku || ''}`" width="420px">
-      <el-form :model="opForm" label-width="80px">
+      <el-form :model="opForm" label-width="80px" style="margin-top: 30px;">
         <el-form-item label="类型">
           <el-radio-group v-model="opForm.type">
             <el-radio-button value="in">入库</el-radio-button>

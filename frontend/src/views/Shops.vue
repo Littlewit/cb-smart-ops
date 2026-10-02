@@ -1,42 +1,44 @@
 <template>
   <div class="page">
-    <!-- 工具栏：admin 才显示新增按钮（右对齐） -->
-    <div class="toolbar">
-      <div class="toolbar-spacer"></div>
-      <el-button type="primary" v-if="isAdmin" @click="dialogVisible = true">
-        <el-icon><Plus /></el-icon>新增店铺
-      </el-button>
-    </div>
-
-    <el-table :data="shops" v-loading="loading">
-      <el-table-column prop="platform" label="平台" width="120">
-        <template #default="{ row }">
-          <el-tag :type="platformTagType(row.platform)" effect="plain">{{ platformLabel(row.platform) }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="name" label="店铺名" />
-      <el-table-column label="连接状态" width="140">
-        <template #default="{ row }">
-          <span class="status-cell">
-            <span class="status-dot" :class="row.status"></span>
-            {{ statusLabel(row.status) }}
-          </span>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="280">
-        <template #default="{ row }">
-          <el-button size="small" type="primary" :loading="syncingId === row.id" v-if="canWrite" @click="onSync(row)">
-            同步商品
-          </el-button>
-          <el-button size="small" v-if="isAdmin" @click="onTest(row)">测试连接</el-button>
-          <el-button size="small" type="danger" v-if="isAdmin" @click="onDelete(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <el-card shadow="hover" style="margin-top: 16px">
+      <!-- 工具栏：admin 才显示新增按钮（右对齐） -->
+      <div class="toolbar">
+        <div class="toolbar-spacer"></div>
+        <el-button type="primary" v-if="isAdmin" @click="dialogVisible = true">
+          <el-icon><Plus /></el-icon>新增店铺
+        </el-button>
+      </div>
+  
+      <el-table :data="shops" v-loading="loading">
+        <el-table-column prop="platform" label="平台" width="120">
+          <template #default="{ row }">
+            <el-tag :type="platformTagType(row.platform)" effect="plain">{{ platformLabel(row.platform) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="店铺名" />
+        <el-table-column label="连接状态" width="140">
+          <template #default="{ row }">
+            <span class="status-cell">
+              <span class="status-dot" :class="row.status"></span>
+              {{ statusLabel(row.status) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="280">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" :loading="syncingId === row.id" v-if="canWrite" @click="onSync(row)">
+              同步商品
+            </el-button>
+            <el-button size="small" v-if="isAdmin" @click="onTest(row)">测试连接</el-button>
+            <el-button size="small" type="danger" v-if="isAdmin" @click="onDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
 
     <!-- 新增店铺：凭证以密码框输入，仅创建时传一次 -->
     <el-dialog v-model="dialogVisible" title="新增店铺" width="440px">
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="90px" style="margin-top: 30px">
         <el-form-item label="平台">
           <el-select v-model="form.platform" style="width: 100%">
             <el-option label="Mock（演示）" value="mock" />
