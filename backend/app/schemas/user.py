@@ -1,5 +1,6 @@
-"""用户相关 Schema：注册 / 登录 / 改密 / 输出。"""
+"""用户相关 Schema：注册 / 登录 / 改密 / 个人信息 / 输出。"""
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -52,3 +53,21 @@ class UserOut(BaseModel):
     id: str
     username: str
     role: str
+
+
+class ProfileOut(BaseModel):
+    """个人中心信息输出：含邮箱与注册时间（UserOut 的展示扩展版）。"""
+
+    model_config = {"from_attributes": True}
+
+    id: str
+    username: str
+    role: str
+    email: str | None
+    created_at: datetime
+
+
+class ProfileUpdate(BaseModel):
+    """个人中心信息更新：当前仅允许改邮箱（用户名/角色为身份锚点不可自改）。"""
+
+    email: str = Field(pattern=EMAIL_PATTERN, description="新邮箱")

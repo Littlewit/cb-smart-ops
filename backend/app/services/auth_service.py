@@ -70,3 +70,12 @@ async def change_password(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "旧密码错误")
     user.password_hash = security.hash_password(new_password)
     await db.flush()
+
+
+def update_email(user: User, email: str) -> None:
+    """更新邮箱（同步函数：纯属性赋值；忘记密码的匹配依据随之更新）。
+
+    注意：改邮箱后，旧"用户名+旧邮箱"组合将无法再重置密码——
+    属预期行为（邮箱是身份凭证的一部分，变更即生效）。
+    """
+    user.email = email

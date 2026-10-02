@@ -6,6 +6,15 @@
 // ---------- 用户 / 认证 ----------
 export type Role = 'admin' | 'operator' | 'viewer'
 
+/** 个人中心信息（GET/PUT /api/auth/me） */
+export interface Profile {
+  id: string
+  username: string
+  role: Role
+  email: string | null
+  created_at: string
+}
+
 // ---------- 店铺 ----------
 export interface Shop {
   id: string

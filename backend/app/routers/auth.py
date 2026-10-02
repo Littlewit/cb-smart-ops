@@ -11,6 +11,8 @@ from app.models import User
 from app.schemas import (
     ChangePasswordRequest,
     LoginRequest,
+    ProfileOut,
+    ProfileUpdate,
     ResetPasswordRequest,
     UserCreate,
     UserOut,
@@ -68,3 +70,24 @@ async def change_password(
     """修改密码（需登录）：验证旧密码后设置新密码。"""
     await auth_service.change_password(db, user, payload.old_password, payload.new_password)
     return ok(message="密码修改成功")
+
+
+# ---------- 个人中心（需登录，全部角色可用） ----------
+
+
+@router.get("/me")
+async def get_profile(user: User = Depends(get_current_user)):
+    """当前登录用户信息：个人中心页展示（含邮箱与注册时间）。"""
+    return ok(ProfileOut.model_validate(user).model_dump(mode="json"))
+
+
+@router.put("/me")
+async def update_profile(
+    payload: ProfileUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """更新个人信息：当前仅邮箱可改（用户名/角色为身份锚点，不可自行修改）。"""
+    auth_service.update_email(user, payload.email)
+    await db.flush()
+    return ok(ProfileOut.model_validate(user).model_dump(mode="json"))

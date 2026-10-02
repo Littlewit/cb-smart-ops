@@ -11,6 +11,8 @@ from app.schemas.shop import ShopCreate, ShopOut, ShopUpdate
 from app.schemas.user import (
     ChangePasswordRequest,
     LoginRequest,
+    ProfileOut,
+    ProfileUpdate,
     ResetPasswordRequest,
     UserCreate,
     UserOut,
@@ -32,6 +34,8 @@ __all__ = [
     "ShopUpdate",
     "ChangePasswordRequest",
     "LoginRequest",
+    "ProfileOut",
+    "ProfileUpdate",
     "ResetPasswordRequest",
     "UserCreate",
     "UserOut",

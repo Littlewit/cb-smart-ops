@@ -12,6 +12,7 @@ import type {
   InventorySummary,
   PagedData,
   Product,
+  Profile,
   Shop,
   SkuMapping,
 } from '@/types'
@@ -40,6 +41,11 @@ export const authApi = {
   /** 已登录修改密码：需验证旧密码 */
   changePassword: (payload: { old_password: string; new_password: string }) =>
     request.post('/auth/change-password', payload),
+  /** 当前登录用户信息（个人中心） */
+  me: () => request.get<Profile>('/auth/me'),
+  /** 更新个人信息（当前仅邮箱可改） */
+  updateMe: (payload: { email: string }) =>
+    request.put<Profile>('/auth/me', payload),
 }
 
 // ---------- 店铺 ----------

@@ -35,6 +35,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'inventory', component: () => import('@/views/Inventory.vue'), meta: { title: '库存看板', role: 'viewer' } },
       { path: 'shops', component: () => import('@/views/Shops.vue'), meta: { title: '店铺管理', role: 'viewer' } },
       { path: 'ai', component: () => import('@/views/AiAdvice.vue'), meta: { title: 'AI 助手', role: 'viewer' } },
+      { path: 'profile', component: () => import('@/views/Profile.vue'), meta: { title: '个人中心', role: 'viewer' } },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/' },
