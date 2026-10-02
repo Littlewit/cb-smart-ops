@@ -176,4 +176,10 @@ onMounted(loadProfile)
 
 /* 操作说明：弱化灰字 */
 .hint { color: #909399; font-size: 12px; margin-top: 12px; }
+
+/* 响应式：窄屏改纵向堆叠，身份卡占满宽度 */
+@media (max-width: 900px) {
+  .profile-page { flex-direction: column; }
+  .id-card { width: 100%; }
+}
 </style>

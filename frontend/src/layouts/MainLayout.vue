@@ -1,12 +1,17 @@
 <template>
-  <!-- 主布局：深色渐变侧边栏 + 顶栏 + 内容区（设计稿：数据看板.html 侧边栏规范） -->
+  <!-- 主布局：深色渐变侧边栏 + 顶栏 + 内容区（设计稿：数据看板.html 侧边栏规范）。
+       移动端（≤768px）：侧边栏脱离文档流固定定位，默认移出屏幕外，
+       点汉堡按钮滑入 + 遮罩；桌面端保持文档流内正常布局 -->
   <el-container class="layout">
-    <el-aside width="220px" class="aside">
+    <!-- 移动端遮罩：点击关闭侧边栏 -->
+    <div v-if="isMobile" :class="['mask', { show: sidebarOpen }]" @click="sidebarOpen = false"></div>
+
+    <el-aside width="220px" :class="['aside', { open: isMobile && sidebarOpen }]">
       <div class="logo">
         <div class="logo-badge"><el-icon :size="18"><Lightning /></el-icon></div>
         <span>跨境电商 AI 运营</span>
       </div>
-      <el-menu router :default-active="$route.path" class="menu">
+      <el-menu router :default-active="$route.path" class="menu" @select="sidebarOpen = false">
         <el-menu-item-group title="主导航">
           <el-menu-item index="/dashboard">
             <el-icon><Odometer /></el-icon><span>数据看板</span>
@@ -33,9 +38,15 @@
 
     <el-container>
       <el-header class="header">
-        <!-- 面包屑：当前页面标题（设计稿 .breadcrumb） -->
-        <div class="breadcrumb">
-          <span class="current">{{ $route.meta.title || '' }}</span>
+        <div class="header-left">
+          <!-- 汉堡按钮：仅移动端显示，切换侧边栏 -->
+          <el-icon v-if="isMobile" class="hamburger" :size="20" @click="sidebarOpen = !sidebarOpen">
+            <Menu />
+          </el-icon>
+          <!-- 面包屑：当前页面标题（设计稿 .breadcrumb） -->
+          <div class="breadcrumb">
+            <span class="current">{{ $route.meta.title || '' }}</span>
+          </div>
         </div>
         <el-dropdown>
           <div class="user-info">
@@ -79,13 +90,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormItemRule } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
 import { authApi, inventoryApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+
+// ---------- 移动端布局（≤768px 侧边栏抽屉化） ----------
+const isMobile = ref(window.innerWidth <= 768)
+const sidebarOpen = ref(false)
+const onWinResize = (): void => {
+  isMobile.value = window.innerWidth <= 768
+  // 从移动切回桌面时复位抽屉状态，避免桌面端残留 open 类
+  if (!isMobile.value) sidebarOpen.value = false
+}
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -98,6 +118,7 @@ const roleLabel = computed(
 // 侧边栏"库存看板"badge：预警商品数（未登录时不请求）
 const alertCount = ref(0)
 onMounted(async () => {
+  window.addEventListener('resize', onWinResize)
   if (!auth.isLoggedIn) return
   try {
     const summary = await inventoryApi.summary()
@@ -107,6 +128,7 @@ onMounted(async () => {
     alertCount.value = 0
   }
 })
+onUnmounted(() => window.removeEventListener('resize', onWinResize))
 
 function onLogout(): void {
   auth.logout()
@@ -164,6 +186,49 @@ async function onChangePwd(): Promise<void> {
 /* ===== 侧边栏：#0f172a → #1e1b4b 纵向渐变（设计稿令牌） ===== */
 .aside {
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+}
+
+/* 顶栏左侧：汉堡 + 面包屑 */
+.header-left { display: flex; align-items: center; gap: 14px; }
+/* 汉堡按钮：桌面隐藏（v-if 已兜底），移动端可点击 */
+.hamburger { cursor: pointer; color: var(--s-ink-secondary); display: flex; }
+
+/* 移动端遮罩：侧边栏打开时覆盖内容区 */
+.mask {
+  display: none;
+}
+
+/* ===== 移动端（≤768px）：侧边栏抽屉化 ===== */
+@media (max-width: 768px) {
+  .aside {
+    /* 脱离文档流：内容区占满全宽；默认移出屏幕左侧 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 2000;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .aside.open {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(15, 23, 42, 0.4);
+  }
+  .mask {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1999;
+    background: rgba(15, 23, 42, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .mask.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .header { padding: 0 14px; }
 }
 
 /* Logo：渐变徽章（135deg indigo→violet）+ 白色标题 */

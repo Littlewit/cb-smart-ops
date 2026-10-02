@@ -330,4 +330,19 @@ onUnmounted(() => {
   border-radius: 6px;
 }
 .chart-box { width: 100%; height: 320px; }
+
+/* ===== 响应式断点 ===== */
+/* 平板：指标 2 列、图表纵向堆叠（echarts 有 window resize 监听自动重算尺寸） */
+@media (max-width: 992px) {
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+  .chart-row { grid-template-columns: 1fr; }
+}
+/* 手机：指标单列，图表降高适配竖屏 */
+@media (max-width: 600px) {
+  .stat-row { grid-template-columns: 1fr; gap: 12px; }
+  .stat-card { padding: 16px 18px; }
+  .chart-row { gap: 12px; }
+  .chart-card { padding: 16px; }
+  .chart-box { height: 260px; }
+}
 </style>

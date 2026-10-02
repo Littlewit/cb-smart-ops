@@ -1,8 +1,9 @@
 <template>
   <div class="page">
-    <!-- 顶部指标卡片（来自 /api/inventory/summary）：图标芯片 + 大数字 -->
+    <!-- 顶部指标卡片（来自 /api/inventory/summary）：图标芯片 + 大数字；
+         xs 单列 / sm 起三列，窄屏不挤压 -->
     <el-row :gutter="16">
-      <el-col :span="8">
+      <el-col :xs="24" :sm="8">
         <el-card shadow="hover">
           <div class="stat">
             <div class="stat-icon indigo"><el-icon><Goods /></el-icon></div>
@@ -13,7 +14,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="8">
+      <el-col :xs="24" :sm="8">
         <el-card shadow="hover">
           <div class="stat">
             <div class="stat-icon ruby"><el-icon><Warning /></el-icon></div>
@@ -24,7 +25,7 @@
           </div>
         </el-card>
       </el-col>
-      <el-col :span="8">
+      <el-col :xs="24" :sm="8">
         <el-card shadow="hover">
           <div class="stat">
             <div class="stat-icon navy"><el-icon><Shop /></el-icon></div>
@@ -72,8 +73,8 @@
       </el-table>
     </el-card>
 
-    <!-- 库存流水抽屉 -->
-    <el-drawer v-model="logsVisible" :title="`库存流水 - ${currentProduct?.sku || ''}`" size="560px">
+    <!-- 库存流水抽屉：窄屏全宽，桌面固定 560px -->
+    <el-drawer v-model="logsVisible" :title="`库存流水 - ${currentProduct?.sku || ''}`" :size="isMobile ? '100%' : '560px'">
       <el-table :data="logs" size="small">
         <el-table-column prop="created_at" label="时间" width="170">
           <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
@@ -93,8 +94,8 @@
       </el-table>
     </el-drawer>
 
-    <!-- 入库/出库/盘点 dialog -->
-    <el-dialog v-model="opVisible" :title="`库存操作 - ${currentProduct?.sku || ''}`" width="420px">
+    <!-- 入库/出库/盘点 dialog：窄屏 95% 宽防溢出 -->
+    <el-dialog v-model="opVisible" :title="`库存操作 - ${currentProduct?.sku || ''}`" :width="isMobile ? '95%' : '420px'">
       <el-form :model="opForm" label-width="80px" style="margin-top: 30px;">
         <el-form-item label="类型">
           <el-radio-group v-model="opForm.type">
@@ -118,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { inventoryApi, productsApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
@@ -126,6 +127,14 @@ import type { InventoryLog, InventorySummary, Product } from '@/types'
 
 const auth = useAuthStore()
 const canWrite = computed(() => ['admin', 'operator'].includes(auth.role))
+
+// 窄屏判定：驱动抽屉/弹窗宽度自适应（el-drawer 的 size 是 prop，CSS 难覆盖）
+const isMobile = ref(window.innerWidth < 640)
+const onWinResize = (): void => {
+  isMobile.value = window.innerWidth < 640
+}
+onMounted(() => window.addEventListener('resize', onWinResize))
+onUnmounted(() => window.removeEventListener('resize', onWinResize))
 
 const summary = ref<InventorySummary>({
   total_products: 0,
