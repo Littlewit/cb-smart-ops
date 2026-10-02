@@ -3,7 +3,10 @@
     <el-card class="login-card">
       <h2 class="title">跨境电商 AI 辅助运营系统</h2>
 
-      <!-- 登录主表单（注册/忘记密码均为弹窗入口；登录需图形验证码防暴力破解） -->
+      <!-- 登录主表单（注册/忘记密码均为弹窗入口；登录需图形验证码防暴力破解）。
+           回车绑定只在 form 级（事件冒泡覆盖三个输入框）——
+           若 input 级重复绑定，一次回车会冒泡触发两次 onLogin，
+           验证码被第一次请求消费后第二次必报"验证码错误或已过期" -->
       <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" size="large" @keyup.enter="onLogin">
         <el-form-item prop="username">
           <el-input v-model="loginForm.username" placeholder="用户名" :prefix-icon="User" autocomplete="off" />
@@ -20,7 +23,6 @@
               maxlength="4"
               :prefix-icon="Key"
               autocomplete="off"
-              @keyup.enter="onLogin"
             />
             <!-- 点击图片刷新验证码；一次性校验，失败后也需刷新 -->
             <img :src="captchaImg" class="captcha-img" title="点击刷新" alt="验证码" @click="refreshCaptcha" />
@@ -224,8 +226,15 @@ async function check(formRef: FormInstance | undefined): Promise<boolean> {
 }
 
 async function onLogin(): Promise<void> {
-  if (!(await check(loginFormRef.value))) return
+  // 防重入：loading 必须在第一个 await 之前"同步"置位——
+  // 否则两次回车事件连发时，第一次在 await 处让出控制权时 loading 仍为 false，
+  // 第二次照样闯进来，双请求会消费掉同一个一次性验证码（第二次必报错）
+  if (loading.value) return
   loading.value = true
+  if (!(await check(loginFormRef.value))) {
+    loading.value = false
+    return
+  }
   try {
     const data = await authApi.login(loginForm)
     // 登录成功才持久化：按勾选状态写入或清除记住的账号
