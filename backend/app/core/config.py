@@ -28,9 +28,10 @@ class Settings(BaseSettings):
     credential_encrypt_key: str = "change-me-32bytes"
 
     deepseek_api_key: str = ""
-    # DeepSeek 使用 OpenAI 兼容协议；官方端点与默认对话模型
+    # DeepSeek 使用 OpenAI 兼容协议；官方端点与默认对话模型（可用 .env 覆盖）
     deepseek_base_url: str = "https://api.deepseek.com"
-    deepseek_model: str = "deepseek-chat"
+    # DeepSeek-V4.1-Flash 的 API 模型名为 deepseek-flash（另一档为 deepseek-v4-pro）
+    deepseek_model: str = "deepseek-flash"
     # false（或未配置 api_key）时 AI 接口全部走规则引擎兜底
     ai_enabled: bool = True
 
