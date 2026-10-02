@@ -5,6 +5,8 @@
 import request from '@/api/request'
 import type {
   AiSuggestion,
+  ChatMessageOut,
+  Conversation,
   DashboardStats,
   InventoryLog,
   InventorySummary,
@@ -89,4 +91,12 @@ export const aiApi = {
     request.get<PagedData<AiSuggestion>>('/ai/suggestions', { params }),
   advice: (payload: { product_id: string; type: 'restock' | 'pricing' }) =>
     request.post('/ai/advice', payload),
+  /** 会话列表（按更新时间倒序），用于侧栏 */
+  conversations: () => request.get<{ items: Conversation[]; total: number }>('/ai/conversations'),
+  /** 会话消息明细（正序），切换会话/刷新后恢复气泡 */
+  messages: (id: string) =>
+    request.get<{ conversation_id: string; items: ChatMessageOut[] }>(
+      `/ai/conversations/${id}/messages`
+    ),
+  removeConversation: (id: string) => request.delete(`/ai/conversations/${id}`),
 }

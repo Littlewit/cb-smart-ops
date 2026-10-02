@@ -86,6 +86,19 @@ export interface AiSuggestion {
   created_at: string
 }
 
+// ---------- AI 会话（方案 B：对话历史后端持久化） ----------
+export interface Conversation {
+  id: string
+  title: string
+  updated_at: string
+}
+
+export interface ChatMessageOut {
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
 // ---------- 看板 ----------
 export interface DashboardStats {
   total_products: number

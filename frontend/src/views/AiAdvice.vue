@@ -1,5 +1,25 @@
 <template>
   <div class="ai-layout">
+    <!-- 最左：会话列表（方案 B：历史后端持久化，刷新/换设备可恢复） -->
+    <el-card class="conv-card" shadow="never">
+      <template #header>
+        <div class="conv-header">
+          <span>会话</span>
+          <el-button size="small" :disabled="streaming" @click="newChat">新对话</el-button>
+        </div>
+      </template>
+      <el-empty v-if="!conversations.length" description="暂无会话" :image-size="60" />
+      <div
+        v-for="c in conversations"
+        :key="c.id"
+        :class="['conv-item', { active: c.id === currentConvId }]"
+        @click="selectConversation(c.id)"
+      >
+        <span class="conv-title" :title="c.title">{{ c.title }}</span>
+        <el-icon class="conv-del" title="删除会话" @click.stop="onDeleteConversation(c.id)"><Delete /></el-icon>
+      </div>
+    </el-card>
+
     <!-- 左侧：AI 对话面板（SSE 逐字渲染） -->
     <el-card class="chat-card" shadow="never">
       <template #header>AI 运营助手（DeepSeek 流式）</template>
@@ -83,10 +103,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { aiApi, productsApi } from '@/api'
 import { renderMarkdown } from '@/utils/markdown'
-import type { AiSuggestion, Product } from '@/types'
+import type { AiSuggestion, ChatMessageOut, Conversation, Product } from '@/types'
 
 // ---------- 对话（SSE 流式） ----------
 interface ChatMessage {
@@ -95,12 +115,68 @@ interface ChatMessage {
   streaming?: boolean
 }
 
-const messages = ref<ChatMessage[]>([
-  { role: 'ai', text: '你好！我是 AI 运营助手，可以询问库存、补货、定价问题。' },
-])
+const WELCOME = '你好！我是 AI 运营助手，可以询问库存、补货、定价问题。'
+const messages = ref<ChatMessage[]>([{ role: 'ai', text: WELCOME }])
 const input = ref('')
 const streaming = ref(false)
 const messagesRef = ref<HTMLElement | null>(null)
+
+// ---------- 会话（方案 B：历史持久化在后端，刷新可恢复） ----------
+const conversations = ref<Conversation[]>([])
+const currentConvId = ref('')
+
+/** 拉取会话列表；selectFirst=true 时自动恢复最近会话（刷新后回填） */
+async function loadConversations(selectFirst = false): Promise<void> {
+  const data = await aiApi.conversations()
+  conversations.value = data.items
+  // 刷新进入页面：默认恢复最近一次会话
+  if (selectFirst && !currentConvId.value && data.items.length) {
+    await selectConversation(data.items[0].id)
+  }
+  // 当前会话已被删除（可能在其他端）→ 重置为欢迎语
+  if (currentConvId.value && !data.items.some((c) => c.id === currentConvId.value)) {
+    resetToWelcome()
+  }
+}
+
+/** 切换会话：拉取消息明细，映射为界面气泡（assistant→ai，历史直接完整展示） */
+async function selectConversation(id: string): Promise<void> {
+  if (id === currentConvId.value || streaming.value) return
+  const data = await aiApi.messages(id)
+  currentConvId.value = id
+  messages.value = data.items.map(
+    (m: ChatMessageOut): ChatMessage => ({ role: m.role === 'user' ? 'user' : 'ai', text: m.content })
+  )
+  scrollBottom()
+}
+
+/** 重置为新对话（清空当前会话指针与气泡，仅保留欢迎语） */
+function resetToWelcome(): void {
+  currentConvId.value = ''
+  messages.value = [{ role: 'ai', text: WELCOME }]
+}
+
+function newChat(): void {
+  if (streaming.value) return
+  resetToWelcome()
+}
+
+/** 删除会话：确认后调删除接口；删的是当前会话则重置界面 */
+async function onDeleteConversation(id: string): Promise<void> {
+  try {
+    await ElMessageBox.confirm('删除后该会话历史无法恢复，确认删除？', '删除会话', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return // 用户取消
+  }
+  await aiApi.removeConversation(id)
+  if (id === currentConvId.value) resetToWelcome()
+  loadConversations()
+  ElMessage.success('会话已删除')
+}
 
 // nextTick 返回 Promise，签名与其保持一致
 const scrollBottom = (): Promise<void> =>
@@ -127,21 +203,20 @@ async function onSend(): Promise<void> {
   try {
     const { useAuthStore } = await import('@/stores/auth')
     const authStore = useAuthStore()
-    // 多轮上下文：取当前消息列表（去掉首条欢迎语与刚 push 的流式占位）最近 6 轮回传，
-    // 后端无状态不存会话，历史由前端维护
-    const history = messages.value
-      .filter((m, i) => i > 0 && m !== aiMsg && !m.streaming)
-      .slice(-6)
-      .map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }))
+    // 会话 ID：空则后端新建（标题取本条消息），否则追加到当前会话；
+    // 多轮上下文由后端从会话表加载，前端不再回传 history
     const resp = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authStore.token}`,
       },
-      body: JSON.stringify({ message: text, history }),
+      body: JSON.stringify({ message: text, conversation_id: currentConvId.value || undefined }),
     })
     if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`)
+    // 会话 ID 经响应头返回（流式响应没有 JSON body 可携带）
+    const convId = resp.headers.get('X-Conversation-Id')
+    if (convId) currentConvId.value = convId
 
     // 逐块读取并按 SSE 帧边界（\n\n）切分
     const reader = resp.body.getReader()
@@ -168,6 +243,8 @@ async function onSend(): Promise<void> {
     aiMsg.streaming = false
     streaming.value = false
     scrollBottom()
+    // 刷新会话列表（新会话标题/排序更新）
+    loadConversations()
   }
 }
 
@@ -211,6 +288,7 @@ async function onGenerate(): Promise<void> {
 // onMounted 回调需返回 void，异步逻辑收敛到 async 函数内
 onMounted(() => {
   loadSuggestions()
+  loadConversations(true) // selectFirst：刷新后自动恢复最近会话
   void (async () => {
     const data = await productsApi.list({ page: 1, page_size: 100 })
     products.value = data.items
@@ -221,6 +299,25 @@ onMounted(() => {
 
 <style scoped>
 .ai-layout { display: flex; gap: 12px; height: calc(100vh - 120px); }
+/* 会话侧栏：窄栏列表，标题单行省略，激活态高亮 */
+.conv-card { width: 210px; display: flex; flex-direction: column; overflow-y: auto; }
+.conv-header { display: flex; justify-content: space-between; align-items: center; }
+.conv-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  color: #303133;
+}
+.conv-item:hover { background: #f5f7fa; }
+.conv-item.active { background: var(--s-primary); color: #fff; }
+.conv-title { flex: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv-del { flex-shrink: 0; opacity: 0; color: inherit; }
+.conv-item:hover .conv-del { opacity: 0.7; }
+.conv-del:hover { opacity: 1 !important; color: var(--s-danger, #f56c6c); }
 .chat-card { flex: 1; display: flex; flex-direction: column; }
 .chat-card :deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .messages { flex: 1; overflow-y: auto; padding: 8px; }

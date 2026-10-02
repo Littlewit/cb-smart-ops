@@ -1,5 +1,6 @@
 from app.core.database import Base  # noqa: F401
 from app.models.ai_suggestion import AiSuggestion
+from app.models.conversation import ChatMessage, Conversation
 from app.models.inventory_log import InventoryLog
 from app.models.order import Order
 from app.models.product import Product, ProductSkuMapping
@@ -17,4 +18,6 @@ __all__ = [
     "InventoryLog",
     "AiSuggestion",
     "RuleDocument",
+    "Conversation",
+    "ChatMessage",
 ]
