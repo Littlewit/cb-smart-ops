@@ -1,11 +1,19 @@
-"""认证路由：注册 / 登录（公开接口，无需 Token）。"""
+"""认证路由：注册 / 登录 / 忘记密码重置（公开）+ 修改密码（需登录）。"""
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.deps import get_current_user
 from app.core.response import ok
-from app.schemas import LoginRequest, UserCreate, UserOut
+from app.models import User
+from app.schemas import (
+    ChangePasswordRequest,
+    LoginRequest,
+    ResetPasswordRequest,
+    UserCreate,
+    UserOut,
+)
 from app.services import auth_service
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -23,3 +31,24 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     """登录：成功返回 JWT（前端存 Pinia + localStorage，请求头携带）。"""
     token = await auth_service.login(db, payload)
     return ok({"access_token": token, "token_type": "bearer"})
+
+
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """忘记密码：用户名 + 注册邮箱 匹配后直接设置新密码（无需登录）。
+
+    演示级方案；生产必须改为邮箱验证码/时效链接（见 schema 注释）。
+    """
+    await auth_service.reset_password(db, payload.username, payload.email, payload.new_password)
+    return ok(message="密码已重置，请使用新密码登录")
+
+
+@router.post("/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """修改密码（需登录）：验证旧密码后设置新密码。"""
+    await auth_service.change_password(db, user, payload.old_password, payload.new_password)
+    return ok(message="密码修改成功")

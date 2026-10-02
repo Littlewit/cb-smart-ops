@@ -1,3 +1,4 @@
+from app.schemas.ai import AdviceRequest, ChatRequest
 from app.schemas.inventory import InventoryOpCreate, InventoryLogOut, InventorySummary
 from app.schemas.product import (
     ProductCreate,
@@ -7,9 +8,17 @@ from app.schemas.product import (
     SkuMappingOut,
 )
 from app.schemas.shop import ShopCreate, ShopOut, ShopUpdate
-from app.schemas.user import LoginRequest, UserCreate, UserOut
+from app.schemas.user import (
+    ChangePasswordRequest,
+    LoginRequest,
+    ResetPasswordRequest,
+    UserCreate,
+    UserOut,
+)
 
 __all__ = [
+    "AdviceRequest",
+    "ChatRequest",
     "InventoryOpCreate",
     "InventoryLogOut",
     "InventorySummary",
@@ -21,7 +30,9 @@ __all__ = [
     "ShopCreate",
     "ShopOut",
     "ShopUpdate",
+    "ChangePasswordRequest",
     "LoginRequest",
+    "ResetPasswordRequest",
     "UserCreate",
     "UserOut",
 ]

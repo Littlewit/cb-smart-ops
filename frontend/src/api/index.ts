@@ -21,10 +21,16 @@ export interface LoginResult {
 }
 
 export const authApi = {
-  register: (payload: { username: string; password: string; role: string }) =>
+  register: (payload: { username: string; password: string; email: string; role: string }) =>
     request.post('/auth/register', payload),
   login: (payload: { username: string; password: string }) =>
     request.post<LoginResult>('/auth/login', payload),
+  /** 忘记密码：用户名+注册邮箱 匹配后重置（公开接口，演示级无邮件验证码） */
+  resetPassword: (payload: { username: string; email: string; new_password: string }) =>
+    request.post('/auth/reset-password', payload),
+  /** 已登录修改密码：需验证旧密码 */
+  changePassword: (payload: { old_password: string; new_password: string }) =>
+    request.post('/auth/change-password', payload),
 }
 
 // ---------- 店铺 ----------

@@ -16,7 +16,12 @@ def make_auth_headers(client: TestClient, username: str, role: str) -> dict:
     """注册 + 登录，返回带 JWT 的请求头（每个测试库独立，用户名可固定）。"""
     resp = client.post(
         "/api/auth/register",
-        json={"username": username, "password": TEST_PASSWORD, "role": role},
+        json={
+            "username": username,
+            "password": TEST_PASSWORD,
+            "email": f"{username}@test.com",
+            "role": role,
+        },
     )
     assert resp.status_code == 201, resp.text
     resp = client.post(

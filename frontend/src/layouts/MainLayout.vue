@@ -46,20 +46,38 @@
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item @click="onLogout">退出登录</el-dropdown-item>
+              <el-dropdown-item @click="pwdVisible = true">修改密码</el-dropdown-item>
+              <el-dropdown-item divided @click="onLogout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
       </el-header>
       <el-main><router-view /></el-main>
+
+      <!-- 修改密码弹窗：验证旧密码后设置新密码，成功后强制重新登录 -->
+      <el-dialog v-model="pwdVisible" title="修改密码" width="420px">
+        <el-form :model="pwdForm" label-width="80px">
+          <el-form-item label="旧密码">
+            <el-input v-model="pwdForm.old_password" type="password" show-password />
+          </el-form-item>
+          <el-form-item label="新密码">
+            <el-input v-model="pwdForm.new_password" type="password" placeholder="≥6 位" show-password />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="pwdVisible = false">取消</el-button>
+          <el-button type="primary" :loading="pwdLoading" @click="onChangePwd">确定</el-button>
+        </template>
+      </el-dialog>
     </el-container>
   </el-container>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { inventoryApi } from '@/api'
+import { ElMessage } from 'element-plus'
+import { authApi, inventoryApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -86,6 +104,28 @@ onMounted(async () => {
 function onLogout(): void {
   auth.logout()
   router.push('/login')
+}
+
+// ---------- 修改密码 ----------
+const pwdVisible = ref(false)
+const pwdLoading = ref(false)
+const pwdForm = reactive({ old_password: '', new_password: '' })
+
+/** 修改成功后强制重新登录（简单起见不做"本会话保持"，安全上更稳妥） */
+async function onChangePwd(): Promise<void> {
+  if (pwdForm.new_password.length < 6) {
+    ElMessage.warning('新密码 ≥6 位')
+    return
+  }
+  pwdLoading.value = true
+  try {
+    await authApi.changePassword({ ...pwdForm })
+    ElMessage.success('密码修改成功，请重新登录')
+    pwdVisible.value = false
+    onLogout()
+  } finally {
+    pwdLoading.value = false
+  }
 }
 </script>
 

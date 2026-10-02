@@ -23,6 +23,7 @@ async def register(db: AsyncSession, payload: UserCreate) -> User:
     user = User(
         username=payload.username,
         password_hash=security.hash_password(payload.password),
+        email=payload.email,
         role=payload.role,
     )
     db.add(user)
@@ -40,3 +41,32 @@ async def login(db: AsyncSession, payload: LoginRequest) -> str:
     if user is None or not security.verify_password(payload.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "用户名或密码错误")
     return security.create_access_token(user.id, user.role)
+
+
+async def reset_password(db: AsyncSession, username: str, email: str, new_password: str) -> None:
+    """忘记密码：用户名 + 注册邮箱 匹配后重置密码。
+
+    演示级方案：直接匹配后重置（无需登录）。
+    安全说明：真实系统必须改为"邮箱验证码/时效重置链接"，
+    否则存在邮箱枚举与越权重置风险——此处仅演示后端能力。
+    """
+    user = (
+        await db.execute(
+            select(User).where(User.username == username, User.email == email)
+        )
+    ).scalar_one_or_none()
+    # 统一文案不区分"用户不存在/邮箱不匹配"，防信息枚举
+    if user is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "用户名或邮箱不匹配")
+    user.password_hash = security.hash_password(new_password)
+    await db.flush()
+
+
+async def change_password(
+    db: AsyncSession, user: User, old_password: str, new_password: str
+) -> None:
+    """已登录用户修改密码：需验证旧密码（防止会话被劫持后直接改密）。"""
+    if not security.verify_password(old_password, user.password_hash):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "旧密码错误")
+    user.password_hash = security.hash_password(new_password)
+    await db.flush()
