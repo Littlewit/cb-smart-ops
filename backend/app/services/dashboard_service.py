@@ -22,16 +22,17 @@ async def stats(db: AsyncSession) -> dict:
 
     # ---------- 近 7 天销售趋势 ----------
     week_ago = datetime.now() - timedelta(days=7)
+    # func.date() 双方言兼容：SQLite date(ts) 与 PG date(timestamp) 均返回 YYYY-MM-DD
+    # （不能用 substr(timestamp)：PG 的 substr 不接受 timestamp 类型）
     rows = (
         await db.execute(
             select(
-                # SQLite 下按日期分组：取 YYYY-MM-DD 前缀
-                func.substr(Order.created_at, 1, 10).label("date"),
+                func.date(Order.created_at).label("date"),
                 func.coalesce(func.sum(Order.amount), 0).label("amount"),
             )
             .where(Order.created_at >= week_ago)
-            .group_by(func.substr(Order.created_at, 1, 10))
-            .order_by(func.substr(Order.created_at, 1, 10))
+            .group_by(func.date(Order.created_at))
+            .order_by(func.date(Order.created_at))
         )
     ).all()
     # 补齐 7 天连续日期（无订单的天填 0，保证折线不断）

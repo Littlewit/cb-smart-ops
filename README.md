@@ -121,7 +121,7 @@ cd frontend && npm test && npm run build
 - [x] 多店铺商品同步（Mock 平台）
 - [x] 库存预警 + AI 补货/定价建议（DeepSeek + RAG）
 - [x] 运营数据看板 + AI 流式对话
-- [ ] Docker Compose 一键部署（PG + Redis + Nginx）
+- [x] Docker Compose 一键部署（PG + Redis + Nginx，7 服务编排）
 - [ ] 真实 SHEIN/Shopify API 对接
 - [ ] 定价建议接入真实竞品数据源
 

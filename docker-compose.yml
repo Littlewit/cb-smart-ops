@@ -1,0 +1,101 @@
+# 跨境电商 AI 辅助运营系统 — 生产/演示部署编排（系统设计 §9.2）
+# 启动：docker compose up -d --build   →   http://localhost
+# API Key 通过宿主环境变量传入（DEEPSEEK_API_KEY 等），见 .env.example
+
+services:
+  # ---------- 数据层 ----------
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ops
+      POSTGRES_PASSWORD: ops
+      POSTGRES_DB: cb_ops
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ops -d cb_ops"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+
+  # ---------- 应用层 ----------
+  # Mock 平台：模拟 SHEIN/Shopify 第三方接口
+  mock:
+    build:
+      context: .
+      dockerfile: mock_platform/Dockerfile
+    expose:
+      - "8001"
+
+  # FastAPI：启动前自动跑迁移 + 规则 seed（均幂等）
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ops:ops@db:5432/cb_ops
+      REDIS_URL: redis://redis:6379/0
+      CELERY_TASK_ALWAYS_EAGER: "false" # 生产必须由 Redis 队列异步执行
+      MOCK_PLATFORM_URL: http://mock:8001
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-in-production-0123456789}
+      CREDENTIAL_ENCRYPT_KEY: ${CREDENTIAL_ENCRYPT_KEY:-change-me-32bytes}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      AI_ENABLED: ${AI_ENABLED:-true}
+    command: >
+      sh -c "alembic upgrade head &&
+             python scripts/seed_rules.py &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mock:
+        condition: service_started
+
+  # Celery Worker：同步/预警/建议任务（与 api 共用镜像）
+  worker:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ops:ops@db:5432/cb_ops
+      REDIS_URL: redis://redis:6379/0
+      CELERY_TASK_ALWAYS_EAGER: "false"
+      MOCK_PLATFORM_URL: http://mock:8001
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      AI_ENABLED: ${AI_ENABLED:-true}
+    command: celery -A app.tasks.celery_app:celery_app worker -l info --concurrency=2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mock:
+        condition: service_started
+
+  # Celery Beat：周期任务调度（单实例）
+  beat:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ops:ops@db:5432/cb_ops
+      REDIS_URL: redis://redis:6379/0
+      CELERY_TASK_ALWAYS_EAGER: "false"
+      MOCK_PLATFORM_URL: http://mock:8001
+    command: celery -A app.tasks.celery_app:celery_app beat -l info
+    depends_on:
+      redis:
+        condition: service_started
+
+  # ---------- 接入层 ----------
+  # Nginx：前端 SPA + /api 反代（SSE 已关闭缓冲）
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

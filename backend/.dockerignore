@@ -1,0 +1,9 @@
+# 构建产物与本地开发文件不进入镜像
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+dev.db
+*.db
+.env
+tests/
