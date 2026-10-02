@@ -96,16 +96,20 @@ body,
    去竖线只留横向发丝线、表头弱化、行距加宽、悬浮 indigo 浅底 */
 
 .el-table {
-  --el-table-border-color: transparent;      /* 去掉默认竖向边框 */
   --el-table-header-bg-color: var(--s-canvas-soft);
   --el-table-header-text-color: var(--s-ink-mute);
   --el-table-row-hover-bg-color: #f2f4fe;    /* primary-light 浅底悬浮 */
   --el-table-tr-bg-color: var(--s-canvas);
+  --el-table-border-color: var(--s-hairline); /* 行分隔用发丝线 */
 
-  /* 无外边框，仅保留圆角（曲线）裁切 */
-  border: none;
+  border: 1px solid var(--s-hairline);        /* 外边框 */
   border-radius: 12px;
-  overflow: hidden;
+  overflow: hidden;                           /* 圆角裁切内部单元格 */
+}
+
+/* 单元格只保留横向分隔线（竖线不加，保持横向数据表风格） */
+.el-table td.el-table__cell {
+  border-bottom: 1px solid var(--s-hairline);
 }
 
 /* 表头：小号 mute 文字 + 轻微字距，弱化层级让数据说话 */

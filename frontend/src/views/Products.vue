@@ -26,28 +26,37 @@
         </el-form-item>
       </el-form>
   
-      <!-- 商品表格：预警行红色高亮 -->
-      <el-table :data="items" v-loading="loading" :row-class-name="rowClass">
-        <el-table-column prop="sku" label="SKU" width="140" />
-        <el-table-column prop="name" label="名称" min-width="160" />
-        <!-- 金额/库存列右对齐 + 等宽数字（Stripe 金融数字规范） -->
-        <el-table-column prop="cost_price" label="成本价" width="100" align="right" class-name="num" />
-        <el-table-column prop="sale_price" label="售价" width="100" align="right" class-name="num" />
-        <el-table-column prop="stock" label="库存" width="90" align="right" class-name="num" />
-        <el-table-column prop="safety_stock" label="安全库存" width="100" align="right" class-name="num" />
-        <el-table-column label="状态" width="90">
+      <!-- 商品表格：预警行红色高亮；点击行打开 SKU 映射抽屉（与库存页交互一致） -->
+      <el-table
+        :data="items"
+        v-loading="loading"
+        :row-class-name="rowClass"
+        @row-click="openMappings"
+      >
+        <el-table-column prop="sku" label="SKU" width="120" />
+        <el-table-column prop="name" label="名称" min-width="100" />
+        <!-- 金额/库存列等宽数字（Stripe 金融数字规范） -->
+        <el-table-column prop="cost_price" label="成本价" width="90" align="center" class-name="num" />
+        <el-table-column prop="sale_price" label="售价" width="90" align="center" class-name="num" />
+        <el-table-column prop="stock" label="库存" width="80" align="center" class-name="num" />
+        <el-table-column prop="safety_stock" label="安全库存" width="90" align="center" class-name="num" />
+        <el-table-column label="状态" width="80">
           <template #default="{ row }">
             <el-tag size="small" :type="row.alert_status ? 'danger' : 'success'" effect="light">
               {{ row.alert_status ? '预警' : '正常' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260">
+        <el-table-column label="操作" width="110">
           <template #default="{ row }">
-            <el-button size="small" @click="openMappings(row)">SKU映射</el-button>
             <template v-if="canWrite">
-              <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="onDelete(row)">删除</el-button>
+              <!-- 编辑/删除用图标按钮；stop 避免触发行点击打开映射 -->
+              <el-button size="small" type="primary" @click.stop="openEdit(row)">
+                <el-icon><Edit /></el-icon>
+              </el-button>
+              <el-button size="small" type="danger" @click.stop="onDelete(row)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
             </template>
           </template>
         </el-table-column>
@@ -66,7 +75,7 @@
 
     <!-- 新增/编辑 dialog -->
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑商品' : '新增商品'" width="480px">
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="90px" style="margin-top: 30px;">
         <el-form-item label="店铺" v-if="!editingId">
           <el-select v-model="form.shop_id" style="width: 100%">
             <el-option v-for="s in shops" :key="s.id" :label="s.name" :value="s.id" />
