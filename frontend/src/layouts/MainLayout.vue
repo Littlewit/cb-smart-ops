@@ -1,9 +1,9 @@
 <template>
   <!-- 主布局：左侧角色菜单 + 顶部用户栏 + 内容区 -->
   <el-container class="layout">
-    <el-aside width="200px">
+    <el-aside width="200px" class="aside">
       <div class="logo">跨境电商 AI 运营</div>
-      <el-menu router :default-active="$route.path" class="menu">
+      <el-menu router :default-active="$route.path" class="menu dark-menu">
         <el-menu-item index="/dashboard">
           <el-icon><Odometer /></el-icon><span>数据看板</span>
         </el-menu-item>
@@ -63,7 +63,11 @@ function onLogout(): void {
 
 <style scoped>
 .layout { height: 100%; }
-/* 侧边栏：白底 + 发丝线；菜单项 pill 化，选中态 indigo 浅底 */
+
+/* 深色侧边栏：Stripe brand-dark-900 深海军蓝面板（card-pricing-featured 同源色） */
+.aside {
+  background: var(--s-dark-900);
+}
 .logo {
   height: 56px;
   display: flex;
@@ -72,21 +76,33 @@ function onLogout(): void {
   font-weight: 400;
   font-size: 18px;
   letter-spacing: -0.22px;
-  color: var(--s-primary);
+  color: #ffffff;
 }
-.menu { border-right: none; padding: 0 8px; }
+
+/* 深色菜单：EP 菜单变量整体翻转 */
+.menu {
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: rgba(255, 255, 255, 0.72);
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.08);
+  --el-menu-active-color: #ffffff;
+  border-right: none;
+  padding: 0 8px;
+}
 .menu :deep(.el-menu-item) {
   border-radius: 9999px;
   margin: 2px 0;
   height: 44px;
-  color: var(--s-ink-secondary);
 }
+.menu :deep(.el-menu-item:hover) {
+  background: rgba(255, 255, 255, 0.08);
+}
+/* 选中态：indigo 填充 + 白字（深色底上的品牌强调） */
 .menu :deep(.el-menu-item.is-active) {
-  background: var(--s-canvas-soft, #f6f9fc);
-  background: #e9e8fd; /* primary-light-9 */
-  color: var(--s-primary-deep);
+  background: var(--s-primary);
+  color: #ffffff;
   font-weight: 400;
 }
+
 .header {
   display: flex;
   align-items: center;
