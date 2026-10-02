@@ -26,6 +26,10 @@
             <img :src="captchaImg" class="captcha-img" title="点击刷新" alt="验证码" @click="refreshCaptcha" />
           </div>
         </el-form-item>
+        <!-- 记住密码：localStorage 持久化（utils/remember），仅存 username/password -->
+        <el-form-item>
+          <el-checkbox v-model="rememberMe">记住密码</el-checkbox>
+        </el-form-item>
         <el-button type="primary" size="large" style="width: 100%" :loading="loading" @click="onLogin">
           登 录
         </el-button>
@@ -105,6 +109,7 @@ import { User, Lock, Key, Message } from '@element-plus/icons-vue'
 import { authApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { decodeRole } from '@/utils/jwt'
+import { clearRemembered, loadRemembered, saveRemembered } from '@/utils/remember'
 import type { Role } from '@/types'
 
 const router = useRouter()
@@ -116,8 +121,19 @@ const loading = ref(false)
 const loginFormRef = ref<FormInstance>()
 const regFormRef = ref<FormInstance>()
 const resetFormRef = ref<FormInstance>()
-// captcha_id/captcha_code 随表单整体提交给登录接口（见 onLogin）
-const loginForm = reactive({ username: '', password: '', captcha_id: '', captcha_code: '' })
+
+// ---------- 记住密码（localStorage 持久化，utils/remember） ----------
+// 模块加载时同步恢复：勾选状态与账号密码在首次渲染前就位，避免填充闪烁
+const remembered = loadRemembered()
+const rememberMe = ref(remembered !== null)
+// captcha_id/captcha_code 随表单整体提交给登录接口（见 onLogin）；
+// username/password 优先用记住的账号回填（记住密码功能）
+const loginForm = reactive({
+  username: remembered?.username ?? '',
+  password: remembered?.password ?? '',
+  captcha_id: '',
+  captcha_code: '',
+})
 const captchaImg = ref('')
 
 /** 拉取新验证码（base64 PNG）；失败静默——登录时后端会拦截并提示 */
@@ -212,6 +228,12 @@ async function onLogin(): Promise<void> {
   loading.value = true
   try {
     const data = await authApi.login(loginForm)
+    // 登录成功才持久化：按勾选状态写入或清除记住的账号
+    if (rememberMe.value) {
+      saveRemembered({ username: loginForm.username, password: loginForm.password })
+    } else {
+      clearRemembered()
+    }
     finishLogin(data.access_token, loginForm.username)
   } catch {
     // 验证码为一次性消费：无论账密对错，失败后必须刷新验证码重输

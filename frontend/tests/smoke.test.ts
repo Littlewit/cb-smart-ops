@@ -2,10 +2,11 @@
  * 前端冒烟测试（Vitest + jsdom）：验证关键纯逻辑与基础挂载。
  * 完整的 E2E 走查由 Playwright 在部署验证阶段执行（计划任务 e2e-verify）。
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { decodeRole } from '@/utils/jwt'
 import { renderMarkdown } from '@/utils/markdown'
+import { loadRemembered, saveRemembered, clearRemembered } from '@/utils/remember'
 
 // 1) JWT payload 解码（Login.vue 中的 role 提取逻辑，抽到 utils 便于测试）
 describe('JWT role 解码', () => {
@@ -43,7 +44,33 @@ describe('Markdown 渲染', () => {
   })
 })
 
-// 3) 基础挂载冒烟（验证 Vue 编译链路可用）
+// 3) 记住密码持久化：保存/读取/清除/容错
+describe('记住密码持久化', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('保存后能原样读回', () => {
+    saveRemembered({ username: 'op01', password: 'Secret6' })
+    expect(loadRemembered()).toEqual({ username: 'op01', password: 'Secret6' })
+  })
+
+  it('清除后返回 null；坏 JSON 容错返回 null', () => {
+    saveRemembered({ username: 'op01', password: 'Secret6' })
+    clearRemembered()
+    expect(loadRemembered()).toBeNull()
+
+    localStorage.setItem('login_remember', '{not-json')
+    expect(loadRemembered()).toBeNull()
+  })
+
+  it('字段缺失（部分记录）视为无效', () => {
+    localStorage.setItem('login_remember', JSON.stringify({ username: 'op01' }))
+    expect(loadRemembered()).toBeNull()
+  })
+})
+
+// 4) 基础挂载冒烟（验证 Vue 编译链路可用）
 describe('App 挂载', () => {
   it('renders simple component', () => {
     const wrapper = mount({ template: '<div>ok</div>' })
