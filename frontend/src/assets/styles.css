@@ -1,0 +1,24 @@
+/* 全局基础样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  background-color: #f5f7fa;
+}
+
+/* 页面通用容器 */
+.page {
+  padding: 16px;
+}
+
+/* 预警高亮行（库存看板用）：低库存商品整行标红 */
+.alert-row {
+  --el-table-tr-bg-color: #fef0f0;
+}

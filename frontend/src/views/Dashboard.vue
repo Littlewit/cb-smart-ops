@@ -1,0 +1,83 @@
+<template>
+  <div class="page">
+    <!-- 顶部指标卡片 -->
+    <el-row :gutter="12">
+      <el-col :span="6"><el-card shadow="hover"><el-statistic title="商品总数" :value="stats.total_products" /></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><el-statistic title="预警商品" :value="stats.alert_count" :value-style="{ color: '#f56c6c' }" /></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><el-statistic title="店铺数量" :value="stats.total_shops" /></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><el-statistic title="近7天销售额" :value="totalSales" :precision="2" prefix="￥" /></el-card></el-col>
+    </el-row>
+
+    <!-- 图表区：左折线（销售趋势）右饼图（店铺分布） -->
+    <el-row :gutter="12" style="margin-top: 12px">
+      <el-col :span="14"><el-card shadow="hover"><div ref="trendRef" class="chart" /></el-card></el-col>
+      <el-col :span="10"><el-card shadow="hover"><div ref="pieRef" class="chart" /></el-card></el-col>
+    </el-row>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import * as echarts from 'echarts'
+import { dashboardApi } from '../api'
+
+const stats = ref({ total_products: 0, alert_count: 0, total_shops: 0, sales_trend: [], shop_distribution: [] })
+
+// 近7天销售额合计（指标卡片）
+const totalSales = computed(() =>
+  (stats.value.sales_trend || []).reduce((sum, d) => sum + Number(d.amount || 0), 0)
+)
+
+const trendRef = ref(null)
+const pieRef = ref(null)
+let trendChart = null
+let pieChart = null
+
+/** 渲染销售趋势折线图（窗口尺寸变化时自适应） */
+function renderTrend(trend) {
+  trendChart = echarts.init(trendRef.value)
+  trendChart.setOption({
+    title: { text: '近 7 天销售额趋势', left: 'center', textStyle: { fontSize: 14 } },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: trend.map((d) => d.date) },
+    yAxis: { type: 'value' },
+    series: [{ type: 'line', data: trend.map((d) => d.amount), smooth: true, areaStyle: { opacity: 0.15 } }],
+  })
+}
+
+/** 渲染店铺商品分布饼图 */
+function renderPie(dist) {
+  pieChart = echarts.init(pieRef.value)
+  pieChart.setOption({
+    title: { text: '各店铺商品分布', left: 'center', textStyle: { fontSize: 14 } },
+    tooltip: { trigger: 'item' },
+    series: [
+      {
+        type: 'pie',
+        radius: ['35%', '65%'],
+        data: dist.map((d) => ({ name: d.shop, value: d.product_count })),
+      },
+    ],
+  })
+}
+
+// 窗口缩放时重算图表尺寸
+const onResize = () => { trendChart?.resize(); pieChart?.resize() }
+
+onMounted(async () => {
+  stats.value = await dashboardApi.stats()
+  renderTrend(stats.value.sales_trend || [])
+  renderPie(stats.value.shop_distribution || [])
+  window.addEventListener('resize', onResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
+  trendChart?.dispose()
+  pieChart?.dispose()
+})
+</script>
+
+<style scoped>
+.chart { height: 320px; }
+</style>

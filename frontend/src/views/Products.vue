@@ -1,0 +1,201 @@
+<template>
+  <div class="page">
+    <!-- 工具栏：搜索 / 预警过滤 / 新增 -->
+    <el-form inline>
+      <el-input v-model="query.q" placeholder="SKU / 名称搜索" clearable style="width: 220px" @change="load" />
+      <el-select v-model="query.shop_id" placeholder="全部店铺" clearable style="width: 160px" @change="load">
+        <el-option v-for="s in shops" :key="s.id" :label="s.name" :value="s.id" />
+      </el-select>
+      <el-select v-model="query.alert" placeholder="全部状态" clearable style="width: 140px" @change="load">
+        <el-option label="仅预警商品" :value="true" />
+        <el-option label="仅正常商品" :value="false" />
+      </el-select>
+      <el-button type="primary" v-if="canWrite" @click="openCreate">新增商品</el-button>
+    </el-form>
+
+    <!-- 商品表格：预警行红色高亮 -->
+    <el-table :data="items" v-loading="loading" :row-class-name="({ row }) => (row.alert_status ? 'alert-row' : '')">
+      <el-table-column prop="sku" label="SKU" width="140" />
+      <el-table-column prop="name" label="名称" min-width="160" />
+      <el-table-column prop="cost_price" label="成本价" width="90" />
+      <el-table-column prop="sale_price" label="售价" width="90" />
+      <el-table-column prop="stock" label="库存" width="80" />
+      <el-table-column prop="safety_stock" label="安全库存" width="90" />
+      <el-table-column label="状态" width="90">
+        <template #default="{ row }">
+          <el-tag :type="row.alert_status ? 'danger' : 'success'">
+            {{ row.alert_status ? '预警' : '正常' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="220">
+        <template #default="{ row }">
+          <el-button size="small" @click="openMappings(row)">SKU映射</el-button>
+          <template v-if="canWrite">
+            <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button size="small" type="danger" @click="onDelete(row)">删除</el-button>
+          </template>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 分页 -->
+    <el-pagination
+      v-model:current-page="query.page"
+      :page-size="query.page_size"
+      :total="total"
+      layout="total, prev, pager, next"
+      style="margin-top: 12px"
+      @current-change="load"
+    />
+
+    <!-- 新增/编辑 dialog -->
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑商品' : '新增商品'" width="480px">
+      <el-form :model="form" label-width="90px">
+        <el-form-item label="店铺" v-if="!editingId">
+          <el-select v-model="form.shop_id" style="width: 100%">
+            <el-option v-for="s in shops" :key="s.id" :label="s.name" :value="s.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="SKU" v-if="!editingId">
+          <el-input v-model="form.sku" />
+        </el-form-item>
+        <el-form-item label="名称">
+          <el-input v-model="form.name" />
+        </el-form-item>
+        <el-form-item label="成本价"><el-input-number v-model="form.cost_price" :min="0" :precision="2" /></el-form-item>
+        <el-form-item label="售价"><el-input-number v-model="form.sale_price" :min="0" :precision="2" /></el-form-item>
+        <el-form-item label="库存"><el-input-number v-model="form.stock" :min="0" /></el-form-item>
+        <el-form-item label="安全库存"><el-input-number v-model="form.safety_stock" :min="0" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="onSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- SKU 映射抽屉 -->
+    <el-drawer v-model="mappingVisible" title="多平台 SKU 映射" size="420px">
+      <el-form inline>
+        <el-select v-model="mappingForm.platform" style="width: 120px">
+          <el-option label="SHEIN" value="shein" />
+          <el-option label="Shopify" value="shopify" />
+          <el-option label="Mock" value="mock" />
+        </el-select>
+        <el-input v-model="mappingForm.external_sku" placeholder="平台侧SKU" style="width: 150px" />
+        <el-button type="primary" v-if="canWrite" @click="addMapping">添加</el-button>
+      </el-form>
+      <el-table :data="mappings">
+        <el-table-column prop="platform" label="平台" width="90" />
+        <el-table-column prop="external_sku" label="平台SKU" />
+        <el-table-column v-if="canWrite" label="操作" width="80">
+          <template #default="{ row }">
+            <el-button size="small" type="danger" @click="removeMapping(row)">删</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-drawer>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { productsApi, shopsApi } from '../api'
+import { useAuthStore } from '../stores/auth'
+
+const auth = useAuthStore()
+// operator 及以上才显示写操作（安全边界在后端，这里只是隐藏入口）
+const canWrite = computed(() => ['admin', 'operator'].includes(auth.role))
+
+const items = ref([])
+const shops = ref([])
+const total = ref(0)
+const loading = ref(false)
+const query = reactive({ q: '', shop_id: '', alert: null, page: 1, page_size: 20 })
+
+const dialogVisible = ref(false)
+const editingId = ref('')
+const form = reactive({})
+
+const mappingVisible = ref(false)
+const mappingProductId = ref('')
+const mappings = ref([])
+const mappingForm = reactive({ platform: 'shein', external_sku: '' })
+
+async function load() {
+  loading.value = true
+  try {
+    const data = await productsApi.list({ ...query })
+    items.value = data.items
+    total.value = data.total
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadShops() {
+  shops.value = await shopsApi.list()
+}
+
+function resetForm() {
+  Object.assign(form, { shop_id: '', sku: '', name: '', cost_price: 0, sale_price: 0, stock: 0, safety_stock: 10 })
+}
+
+function openCreate() {
+  editingId.value = ''
+  resetForm()
+  dialogVisible.value = true
+}
+
+function openEdit(row) {
+  editingId.value = row.id
+  Object.assign(form, row)
+  dialogVisible.value = true
+}
+
+async function onSubmit() {
+  if (editingId.value) {
+    // 编辑：仅提交可更新字段（shop_id/sku 创建后不可改）
+    await productsApi.update(editingId.value, {
+      name: form.name, cost_price: form.cost_price, sale_price: form.sale_price,
+      stock: form.stock, safety_stock: form.safety_stock,
+    })
+  } else {
+    await productsApi.create({ ...form })
+  }
+  ElMessage.success('已保存')
+  dialogVisible.value = false
+  load()
+}
+
+async function onDelete(row) {
+  await ElMessageBox.confirm(`确认删除商品 ${row.sku}？关联的流水/映射将一并删除`, '删除确认', { type: 'warning' })
+  await productsApi.remove(row.id)
+  ElMessage.success('已删除')
+  load()
+}
+
+// ---------- SKU 映射 ----------
+async function openMappings(row) {
+  mappingProductId.value = row.id
+  mappings.value = await productsApi.listSkuMappings(row.id)
+  mappingVisible.value = true
+}
+
+async function addMapping() {
+  await productsApi.addSkuMapping(mappingProductId.value, { ...mappingForm })
+  mappings.value = await productsApi.listSkuMappings(mappingProductId.value)
+  ElMessage.success('已添加')
+}
+
+async function removeMapping(row) {
+  await productsApi.removeSkuMapping(mappingProductId.value, row.id)
+  mappings.value = await productsApi.listSkuMappings(mappingProductId.value)
+}
+
+onMounted(() => {
+  load()
+  loadShops()
+})
+</script>
