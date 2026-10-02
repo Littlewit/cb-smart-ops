@@ -4,20 +4,21 @@
       <h2 class="title">跨境电商 AI 辅助运营系统</h2>
 
       <!-- 登录主表单（注册/忘记密码均为弹窗入口；登录需图形验证码防暴力破解） -->
-      <el-form :model="loginForm" size="large" @keyup.enter="onLogin">
-        <el-form-item>
-          <el-input v-model="loginForm.username" placeholder="用户名" autocomplete="off" />
+      <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" size="large" @keyup.enter="onLogin">
+        <el-form-item prop="username">
+          <el-input v-model="loginForm.username" placeholder="用户名" :prefix-icon="User" autocomplete="off" />
         </el-form-item>
         <!-- 密码框用 new-password：Chrome 会无视 off 强制填充已存密码 -->
-        <el-form-item>
-          <el-input v-model="loginForm.password" type="password" placeholder="密码" show-password autocomplete="new-password" />
+        <el-form-item prop="password">
+          <el-input v-model="loginForm.password" type="password" placeholder="密码" show-password :prefix-icon="Lock" autocomplete="new-password" />
         </el-form-item>
-        <el-form-item>
+        <el-form-item prop="captcha_code">
           <div class="captcha-row">
             <el-input
               v-model="loginForm.captcha_code"
               placeholder="验证码"
               maxlength="4"
+              :prefix-icon="Key"
               autocomplete="off"
               @keyup.enter="onLogin"
             />
@@ -38,16 +39,16 @@
     </el-card>
 
     <!-- 注册弹窗（原 Tab 改弹窗；新增邮箱字段供忘记密码匹配） -->
-    <el-dialog v-model="regVisible" title="注册账号" width="480px">
-      <el-form :model="regForm" size="large" label-width="80px">
-        <el-form-item label="用户名">
-          <el-input v-model="regForm.username" placeholder="≥3 位" autocomplete="off" />
+    <el-dialog v-model="regVisible" title="注册账号" width="480px" @closed="regFormRef?.resetFields()">
+      <el-form ref="regFormRef" :model="regForm" :rules="regRules" size="large" label-width="80px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="regForm.username" placeholder="≥3 位" :prefix-icon="User" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="密码">
-          <el-input v-model="regForm.password" type="password" placeholder="≥6 位" show-password autocomplete="new-password" />
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="regForm.password" type="password" placeholder="≥6 位" show-password :prefix-icon="Lock" autocomplete="new-password" />
         </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="regForm.email" placeholder="用于忘记密码时身份匹配" autocomplete="off" />
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="regForm.email" placeholder="用于忘记密码时身份匹配" :prefix-icon="Message" autocomplete="off" />
         </el-form-item>
         <el-form-item label="角色">
           <el-select v-model="regForm.role" style="width: 100%">
@@ -64,22 +65,22 @@
     </el-dialog>
 
     <!-- 忘记密码弹窗：用户名 + 注册邮箱 匹配后设置新密码 -->
-    <el-dialog v-model="resetVisible" title="重置密码" width="480px">
+    <el-dialog v-model="resetVisible" title="重置密码" width="480px" @closed="resetFormRef?.resetFields()">
       <el-alert
         type="info"
         :closable="false"
         title="验证用户名与注册邮箱后即可设置新密码（演示级方案，未发邮件验证码）"
         style="margin-bottom: 16px"
       />
-      <el-form :model="resetForm" label-width="80px">
-        <el-form-item label="用户名">
-          <el-input v-model="resetForm.username" autocomplete="off" />
+      <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" size="large" label-width="90px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="resetForm.username" :prefix-icon="User" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="注册邮箱">
-          <el-input v-model="resetForm.email" autocomplete="off" />
+        <el-form-item label="注册邮箱" prop="email">
+          <el-input v-model="resetForm.email" :prefix-icon="Message" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="新密码">
-          <el-input v-model="resetForm.new_password" type="password" placeholder="≥6 位" show-password autocomplete="new-password" />
+        <el-form-item label="新密码" prop="new_password">
+          <el-input v-model="resetForm.new_password" type="password" placeholder="≥6 位" show-password :prefix-icon="Lock" autocomplete="new-password" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -94,6 +95,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+// 表单图标（main.ts 已全局注册，这里按需具名导入以传给 prefix-icon）
+import { User, Lock, Key, Message } from '@element-plus/icons-vue'
 import { authApi } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { decodeRole } from '@/utils/jwt'
@@ -104,6 +108,10 @@ const route = useRoute()
 const auth = useAuthStore()
 
 const loading = ref(false)
+// 三个表单实例：用于 validate() 校验与弹窗关闭后 resetFields()
+const loginFormRef = ref<FormInstance>()
+const regFormRef = ref<FormInstance>()
+const resetFormRef = ref<FormInstance>()
 // captcha_id/captcha_code 随表单整体提交给登录接口（见 onLogin）
 const loginForm = reactive({ username: '', password: '', captcha_id: '', captcha_code: '' })
 const captchaImg = ref('')
@@ -129,6 +137,43 @@ const regForm = reactive<{ username: string; password: string; email: string; ro
 })
 const resetForm = reactive({ username: '', email: '', new_password: '' })
 
+/** 登录校验规则：必填项前置拦截，减少无效请求 */
+const loginRules: FormRules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captcha_code: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
+}
+
+/** 注册校验规则：与后端 UserCreate 约束保持一致（长度/邮箱格式） */
+const EMAIL_PATTERN = /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/
+const regRules: FormRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 64, message: '用户名长度 3-64 位', trigger: 'blur' },
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
+  ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { pattern: EMAIL_PATTERN, message: '邮箱格式不正确', trigger: 'blur' },
+  ],
+}
+
+/** 重置密码校验规则 */
+const resetRules: FormRules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入注册邮箱', trigger: 'blur' },
+    { pattern: EMAIL_PATTERN, message: '邮箱格式不正确', trigger: 'blur' },
+  ],
+  new_password: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
+  ],
+}
+
 onMounted(refreshCaptcha)
 
 /** 从 JWT payload 中解出 role（客户端解码仅用于菜单显示，安全边界在后端 RBAC） */
@@ -144,15 +189,14 @@ function finishLogin(token: string, username: string): void {
   router.push(redirect.startsWith('/login') ? '/' : redirect)
 }
 
+/** 统一校验入口：通过返回 true，失败已由表单内联提示 */
+async function check(formRef: FormInstance | undefined): Promise<boolean> {
+  if (!formRef) return false
+  return formRef.validate().then(() => true).catch(() => false)
+}
+
 async function onLogin(): Promise<void> {
-  if (!loginForm.username || !loginForm.password) {
-    ElMessage.warning('请输入用户名和密码')
-    return
-  }
-  if (!loginForm.captcha_code) {
-    ElMessage.warning('请输入验证码')
-    return
-  }
+  if (!(await check(loginFormRef.value))) return
   loading.value = true
   try {
     const data = await authApi.login(loginForm)
@@ -166,14 +210,7 @@ async function onLogin(): Promise<void> {
 }
 
 async function onRegister(): Promise<void> {
-  if (regForm.username.length < 3 || regForm.password.length < 6) {
-    ElMessage.warning('用户名 ≥3 位，密码 ≥6 位')
-    return
-  }
-  if (!/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(regForm.email)) {
-    ElMessage.warning('请输入正确的邮箱格式')
-    return
-  }
+  if (!(await check(regFormRef.value))) return
   loading.value = true
   try {
     await authApi.register(regForm)
@@ -187,10 +224,7 @@ async function onRegister(): Promise<void> {
 
 /** 重置成功：回填用户名到登录表单，引导用新密码登录 */
 async function onReset(): Promise<void> {
-  if (resetForm.new_password.length < 6) {
-    ElMessage.warning('新密码 ≥6 位')
-    return
-  }
+  if (!(await check(resetFormRef.value))) return
   loading.value = true
   try {
     await authApi.resetPassword(resetForm)
