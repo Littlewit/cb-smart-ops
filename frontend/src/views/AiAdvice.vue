@@ -5,7 +5,13 @@
       <template #header>AI 运营助手（DeepSeek 流式）</template>
       <div class="messages" ref="messagesRef">
         <div v-for="(m, i) in messages" :key="i" :class="['msg', m.role]">
-          <div class="bubble">{{ m.text }}<span v-if="m.streaming" class="cursor">▍</span></div>
+          <!-- AI 气泡走 Markdown 渲染（utils/markdown，html:false 防 XSS）；
+               用户气泡保持纯文本插值；流式光标在 v-html 节点之外避免被覆盖 -->
+          <div v-if="m.role === 'ai'" class="bubble">
+            <span class="md-body" v-html="renderMarkdown(m.text)"></span>
+            <span v-if="m.streaming" class="cursor">▍</span>
+          </div>
+          <div v-else class="bubble">{{ m.text }}</div>
         </div>
       </div>
       <div class="input-bar">
@@ -79,6 +85,7 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { aiApi, productsApi } from '@/api'
+import { renderMarkdown } from '@/utils/markdown'
 import type { AiSuggestion, Product } from '@/types'
 
 // ---------- 对话（SSE 流式） ----------
@@ -226,6 +233,37 @@ onMounted(() => {
   white-space: pre-wrap;
   background: #f4f4f5;
 }
+/* AI 气泡为 Markdown 渲染（块级元素自带间距），关闭整体 pre-wrap 防双重换行 */
+.msg.ai .bubble { white-space: normal; }
+/* v-html 内容无 scoped 属性，需 :deep 穿透设置排版样式 */
+.msg.ai .bubble :deep(.md-body) { line-height: 1.6; font-size: 14px; }
+.msg.ai .bubble :deep(p) { margin: 0 0 6px; }
+.msg.ai .bubble :deep(p:last-child) { margin-bottom: 0; }
+.msg.ai .bubble :deep(ul),
+.msg.ai .bubble :deep(ol) { margin: 4px 0 6px; padding-left: 20px; }
+.msg.ai .bubble :deep(li) { margin: 2px 0; }
+.msg.ai .bubble :deep(code) {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.msg.ai .bubble :deep(pre) {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 8px 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+.msg.ai .bubble :deep(pre code) { background: transparent; padding: 0; }
+.msg.ai .bubble :deep(table) { border-collapse: collapse; margin: 6px 0; }
+.msg.ai .bubble :deep(th),
+.msg.ai .bubble :deep(td) { border: 1px solid #dcdfe6; padding: 4px 8px; font-size: 13px; }
+.msg.ai .bubble :deep(a) { color: var(--s-primary); }
+.msg.ai .bubble :deep(h1),
+.msg.ai .bubble :deep(h2),
+.msg.ai .bubble :deep(h3),
+.msg.ai .bubble :deep(h4) { margin: 8px 0 6px; font-size: 15px; }
 .msg.user .bubble { background: var(--s-primary); color: #fff; }
 .cursor { animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity: 0; } }

@@ -40,7 +40,7 @@
 
     <!-- 注册弹窗（原 Tab 改弹窗；新增邮箱字段供忘记密码匹配） -->
     <el-dialog v-model="regVisible" title="注册账号" width="480px" @closed="regFormRef?.resetFields()">
-      <el-form ref="regFormRef" :model="regForm" :rules="regRules" size="large" label-width="80px">
+      <el-form ref="regFormRef" :model="regForm" :rules="regRules" size="large" label-width="80px" style="margin-top: 30px;">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="regForm.username" placeholder="≥3 位" :prefix-icon="User" autocomplete="off" />
         </el-form-item>
@@ -69,8 +69,8 @@
       <el-alert
         type="info"
         :closable="false"
-        title="验证用户名与注册邮箱后即可设置新密码（演示级方案，未发邮件验证码）"
-        style="margin-bottom: 16px"
+        title="验证用户名与注册邮箱后即可设置新密码"
+        style="margin: 16px 0"
       />
       <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" size="large" label-width="90px">
         <el-form-item label="用户名" prop="username">
