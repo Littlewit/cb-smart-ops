@@ -37,7 +37,7 @@
           <el-tag size="small" :type="s.source === 'ai' ? 'success' : 'info'" effect="plain">
             {{ s.source === 'ai' ? 'DeepSeek' : '规则引擎' }}
           </el-tag>
-          <span class="sug-time">{{ s.created_at?.slice(5, 16) }}</span>
+          <span class="sug-time">{{ s.created_at?.slice(5, 16).replace('T', ' ') }}</span>
         </div>
         <!-- 按 type 渲染建议内容 -->
         <template v-if="s.type === 'restock'">
@@ -219,7 +219,7 @@ onMounted(() => {
   white-space: pre-wrap;
   background: #f4f4f5;
 }
-.msg.user .bubble { background: #409eff; color: #fff; }
+.msg.user .bubble { background: var(--s-primary); color: #fff; }
 .cursor { animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .input-bar { display: flex; gap: 8px; padding-top: 8px; }

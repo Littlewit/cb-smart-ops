@@ -63,21 +63,42 @@ function onLogout(): void {
 
 <style scoped>
 .layout { height: 100%; }
+/* 侧边栏：白底 + 发丝线；菜单项 pill 化，选中态 indigo 浅底 */
 .logo {
   height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  color: #409eff;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.22px;
+  color: var(--s-primary);
 }
-.menu { border-right: none; }
+.menu { border-right: none; padding: 0 8px; }
+.menu :deep(.el-menu-item) {
+  border-radius: 9999px;
+  margin: 2px 0;
+  height: 44px;
+  color: var(--s-ink-secondary);
+}
+.menu :deep(.el-menu-item.is-active) {
+  background: var(--s-canvas-soft, #f6f9fc);
+  background: #e9e8fd; /* primary-light-9 */
+  color: var(--s-primary-deep);
+  font-weight: 400;
+}
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #e6e6e6;
+  background: var(--s-canvas);
+  border-bottom: 1px solid var(--s-hairline);
 }
-.user { cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.title {
+  font-weight: 300;
+  font-size: 18px;      /* heading-sm */
+  letter-spacing: -0.18px;
+  color: var(--s-ink);
+}
+.user { cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--s-ink-secondary); }
 </style>

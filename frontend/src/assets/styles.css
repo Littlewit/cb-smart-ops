@@ -1,4 +1,56 @@
-/* 全局基础样式 */
+/**
+ * 全局样式 — Stripe（Stripi 解析版）设计语言
+ * 设计令牌来源：getdesign stripe DESIGN.md
+ * 关键 token：primary #533afd / ink #0d253d / hairline #e3e8ee /
+ *            300 字重 + 负字距 / 按钮 pill 9999px / 卡片圆角 12px / 蓝调阴影
+ */
+
+/* ---------- 设计令牌 + Element Plus 主题覆盖 ---------- */
+:root {
+  /* Stripe 原始令牌 */
+  --s-primary: #533afd;        /* electric indigo：唯一填充色 */
+  --s-primary-deep: #4434d4;
+  --s-primary-press: #2e2b8c;  /* 按压态 */
+  --s-primary-soft: #665efd;
+  --s-primary-subdued: #b9b9f9;/* 柔和标签底 */
+  --s-dark-900: #1c1e54;       /* 深色面板 */
+  --s-ink: #0d253d;            /* 正文主色（深海军蓝） */
+  --s-ink-secondary: #273951;
+  --s-ink-mute: #64748d;
+  --s-canvas: #ffffff;
+  --s-canvas-soft: #f6f9fc;    /* 冷调近白分区底 */
+  --s-hairline: #e3e8ee;       /* 发丝线边框 */
+  --s-ruby: #ea2261;           /* 警示/强调点缀（不做按钮色） */
+  --s-shadow-blue: #003770;    /* 阴影统一带蓝色调 */
+
+  /* Element Plus 主题变量：主色替换为 Stripe indigo（含 light/dark 阶梯） */
+  --el-color-primary: #533afd;
+  --el-color-primary-light-3: #665efd;
+  --el-color-primary-light-5: #8a86fd;
+  --el-color-primary-light-7: #b9b9f9;
+  --el-color-primary-light-8: #d3d2fb;
+  --el-color-primary-light-9: #e9e8fd;
+  --el-color-primary-dark-2: #2e2b8c;
+  --el-color-danger: #ea2261;  /* Stripe ruby 语义化为警示色 */
+
+  /* 文字：ink 三级层次 */
+  --el-text-color-primary: #0d253d;
+  --el-text-color-regular: #273951;
+  --el-text-color-secondary: #64748d;
+
+  /* 边框：发丝线 */
+  --el-border-color: #e3e8ee;
+  --el-border-color-light: #e3e8ee;
+  --el-border-color-lighter: #edf1f5;
+
+  /* 字体：Sohne 不可用则回退 SF Pro / 系统栈；正文 300 字重 */
+  --el-font-family: 'Sohne', 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei',
+    system-ui, -apple-system, sans-serif;
+
+  /* 圆角：输入框 6px（rounded.sm） */
+  --el-border-radius-base: 6px;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -9,16 +61,73 @@ html,
 body,
 #app {
   height: 100%;
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
-  background-color: #f5f7fa;
+  font-family: 'Sohne', 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei',
+    system-ui, -apple-system, sans-serif;
+  /* Stripe 正文：300 字重 + ink 色，数字等宽（tnum）用于金额/库存列 */
+  font-weight: 300;
+  color: var(--s-ink);
+  background-color: var(--s-canvas-soft);
 }
 
-/* 页面通用容器 */
+/* ---------- Element Plus 组件风格化（Stripe 细节） ---------- */
+
+/* 按钮：pill 9999px（Stripe 招牌圆角），字重 400 */
+.el-button {
+  border-radius: 9999px;
+  font-weight: 400;
+}
+/* 主按钮按压态 → primary-press */
+.el-button--primary:not(.is-disabled):active {
+  background-color: var(--s-primary-press);
+  border-color: var(--s-primary-press);
+}
+
+/* 卡片：12px 圆角（rounded.lg）+ 蓝调阴影 */
+.el-card {
+  border-radius: 12px;
+  border-color: var(--s-hairline);
+  box-shadow: 0 1px 3px rgba(0, 55, 112, 0.06), 0 8px 24px rgba(0, 55, 112, 0.06);
+}
+
+/* 表格：表头用 canvas-soft 底 + mute 文字 */
+.el-table {
+  --el-table-header-bg-color: var(--s-canvas-soft);
+  --el-table-header-text-color: var(--s-ink-mute);
+  --el-table-row-hover-bg-color: #f2f4fe;
+}
+.el-table th.el-table__cell {
+  font-weight: 400;
+}
+
+/* 输入框：6px 圆角 + hairline 边框 */
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  box-shadow: 0 0 0 1px var(--s-hairline) inset;
+}
+
+/* 统计数字：300 字重 + 等宽数字（金融表格数字规范） */
+.el-statistic__number {
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.42px;
+  color: var(--s-ink);
+}
+.el-statistic__head {
+  color: var(--s-ink-mute);
+  font-weight: 300;
+}
+
+/* 对话框 / 抽屉：12px 圆角 */
+.el-dialog,
+.el-drawer {
+  border-radius: 12px;
+}
+
+/* ---------- 页面通用 ---------- */
 .page {
-  padding: 16px;
+  padding: 24px;
 }
-
-/* 预警高亮行（库存看板用）：低库存商品整行标红 */
 .alert-row {
-  --el-table-tr-bg-color: #fef0f0;
+  --el-table-tr-bg-color: #fdf0f4; /* 预警行：ruby 的浅色变体 */
 }

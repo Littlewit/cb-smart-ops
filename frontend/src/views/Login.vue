@@ -104,13 +104,30 @@ async function onRegister(): Promise<void> {
 </script>
 
 <style scoped>
+/* Stripe 渐变 mesh：cream → 橙 → lavender → indigo → ruby 的横向大气渐变带 */
 .login-wrap {
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1f2d3d 0%, #409eff 100%);
+  background:
+    radial-gradient(120% 90% at 15% 20%, rgba(245, 233, 212, 0.9) 0%, rgba(245, 233, 212, 0) 55%),
+    radial-gradient(100% 80% at 85% 10%, rgba(234, 34, 97, 0.35) 0%, rgba(234, 34, 97, 0) 50%),
+    linear-gradient(115deg, #f9c8b6 0%, #c8b8f5 35%, #533afd 70%, #4434d4 100%);
 }
-.login-card { width: 380px; padding: 8px 12px; }
-.title { text-align: center; margin: 12px 0 20px; color: #303133; }
+/* 白色画布卡片浮于渐变之上：12px 圆角 + 蓝调阴影 */
+.login-card {
+  width: 380px;
+  padding: 8px 12px;
+  border: 1px solid var(--s-hairline);
+  box-shadow: 0 12px 48px rgba(0, 55, 112, 0.18);
+}
+.title {
+  text-align: center;
+  margin: 12px 0 20px;
+  color: var(--s-ink);
+  font-weight: 300;
+  font-size: 22px;      /* heading-lg */
+  letter-spacing: -0.22px;
+}
 </style>
