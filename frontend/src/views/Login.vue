@@ -4,7 +4,7 @@
       <h2 class="title">跨境电商 AI 辅助运营系统</h2>
 
       <!-- 登录主表单（注册/忘记密码均为弹窗入口；登录需图形验证码防暴力破解） -->
-      <el-form :model="loginForm" @keyup.enter="onLogin">
+      <el-form :model="loginForm" size="large" @keyup.enter="onLogin">
         <el-form-item>
           <el-input v-model="loginForm.username" placeholder="用户名" autocomplete="off" />
         </el-form-item>
@@ -25,7 +25,7 @@
             <img :src="captchaImg" class="captcha-img" title="点击刷新" alt="验证码" @click="refreshCaptcha" />
           </div>
         </el-form-item>
-        <el-button type="primary" style="width: 100%" :loading="loading" @click="onLogin">
+        <el-button type="primary" size="large" style="width: 100%" :loading="loading" @click="onLogin">
           登 录
         </el-button>
       </el-form>
@@ -38,8 +38,8 @@
     </el-card>
 
     <!-- 注册弹窗（原 Tab 改弹窗；新增邮箱字段供忘记密码匹配） -->
-    <el-dialog v-model="regVisible" title="注册账号" width="440px">
-      <el-form :model="regForm" label-width="70px">
+    <el-dialog v-model="regVisible" title="注册账号" width="480px">
+      <el-form :model="regForm" size="large" label-width="80px">
         <el-form-item label="用户名">
           <el-input v-model="regForm.username" placeholder="≥3 位" autocomplete="off" />
         </el-form-item>
@@ -58,13 +58,13 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="regVisible = false">取消</el-button>
-        <el-button type="primary" :loading="loading" @click="onRegister">注 册</el-button>
+        <el-button size="large" @click="regVisible = false">取消</el-button>
+        <el-button type="primary" size="large" :loading="loading" @click="onRegister">注 册</el-button>
       </template>
     </el-dialog>
 
     <!-- 忘记密码弹窗：用户名 + 注册邮箱 匹配后设置新密码 -->
-    <el-dialog v-model="resetVisible" title="重置密码" width="440px">
+    <el-dialog v-model="resetVisible" title="重置密码" width="480px">
       <el-alert
         type="info"
         :closable="false"
@@ -83,8 +83,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="resetVisible = false">取消</el-button>
-        <el-button type="primary" :loading="loading" @click="onReset">重置密码</el-button>
+        <el-button size="large" @click="resetVisible = false">取消</el-button>
+        <el-button type="primary" size="large" :loading="loading" @click="onReset">重置密码</el-button>
       </template>
     </el-dialog>
   </div>
@@ -216,31 +216,32 @@ async function onReset(): Promise<void> {
     radial-gradient(100% 80% at 85% 10%, rgba(234, 34, 97, 0.35) 0%, rgba(234, 34, 97, 0) 50%),
     linear-gradient(115deg, #f9c8b6 0%, #c8b8f5 35%, #533afd 70%, #4434d4 100%);
 }
-/* 白色画布卡片浮于渐变之上：12px 圆角 + 蓝调阴影 */
+/* 白色画布卡片浮于渐变之上：加宽容纳 large 表单 + 蓝调阴影 */
 .login-card {
-  width: 380px;
-  padding: 8px 12px;
+  width: 420px;
+  padding: 16px 24px 20px;
   border: 1px solid var(--s-hairline);
   box-shadow: 0 12px 48px rgba(0, 55, 112, 0.18);
 }
 .title {
   text-align: center;
-  margin: 12px 0 20px;
+  margin: 14px 0 24px;
   color: var(--s-ink);
   font-weight: 300;
-  font-size: 22px;      /* heading-lg */
-  letter-spacing: -0.22px;
+  font-size: 24px;      /* display-md */
+  letter-spacing: -0.26px;
 }
 /* 辅助入口：两端分布 */
 .aux-links {
   display: flex;
   justify-content: space-between;
-  margin-top: 14px;
+  margin-top: 18px;
+  font-size: 14px;
 }
-/* 验证码行：输入框与图片等高排列，图片可点击刷新 */
+/* 验证码行：图片高度对齐 large 输入框（40px），可点击刷新 */
 .captcha-row { display: flex; gap: 10px; align-items: center; width: 100%; }
 .captcha-img {
-  height: 32px;
+  height: 40px;
   border-radius: 6px;
   border: 1px solid var(--s-hairline);
   cursor: pointer;
