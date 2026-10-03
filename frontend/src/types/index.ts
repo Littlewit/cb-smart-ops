@@ -110,6 +110,143 @@ export interface ChatMessageOut {
   created_at: string
 }
 
+// ---------- 采购（ERP） ----------
+export interface Supplier {
+  id: string
+  name: string
+  contact: string | null
+  phone: string | null
+  email: string | null
+  status: 'active' | 'disabled'
+}
+
+export type PoStatus = 'draft' | 'submitted' | 'receiving' | 'completed' | 'cancelled'
+
+export interface PurchaseOrderItem {
+  id: string
+  product_id: string
+  quantity: number
+  unit_price: number
+  received_qty: number
+}
+
+export interface PurchaseOrder {
+  id: string
+  po_no: string
+  supplier_id: string
+  status: PoStatus
+  total_amount: number
+  expected_date: string | null
+  remark: string | null
+  created_at: string
+  items?: PurchaseOrderItem[]
+}
+
+// ---------- 仓库（ERP） ----------
+export interface WarehouseLocation {
+  id: string
+  code: string
+  name: string | null
+  remark: string | null
+}
+
+export interface Batch {
+  id: string
+  batch_no: string
+  product_id: string
+  po_item_id: string | null
+  location_id: string | null
+  qty_initial: number
+  qty_remaining: number
+  location?: WarehouseLocation | null
+  product?: Product | null
+}
+
+export interface StocktakingItemOut {
+  id: string
+  product_id: string
+  system_qty: number
+  counted_qty: number | null
+  product?: Product | null
+}
+
+export interface Stocktaking {
+  id: string
+  status: 'processing' | 'completed'
+  remark: string | null
+  created_at: string
+  items?: StocktakingItemOut[]
+}
+
+// ---------- 订单（ERP） ----------
+export type OrderStatus = 'pending' | 'partial' | 'shipped' | 'legacy'
+
+export interface OrderItemOut {
+  id: string
+  product_id: string
+  platform_sku: string
+  quantity: number
+  price: number
+}
+
+export interface PlatformOrder {
+  id: string
+  platform_order_no: string
+  platform: string | null
+  status: OrderStatus
+  amount: number
+  receiver_name: string | null
+  receiver_phone: string | null
+  receiver_address: string | null
+  shipped_at: string | null
+  created_at: string
+  items: OrderItemOut[]
+}
+
+export interface Shipment {
+  id: string
+  order_id: string
+  platform_order_no: string
+  status: 'waiting' | 'shipped'
+  tracking_no: string | null
+  carrier: string | null
+  shipped_at: string | null
+  created_at: string
+  items: { id: string; product_id: string; quantity: number }[]
+}
+
+// ---------- 报表（ERP） ----------
+export interface CeoDashboard {
+  days: number
+  gmv: number
+  gross_profit: number
+  gross_margin: number
+  total_stock: number
+  stock_turnover: number
+  alert_count: number
+  sales_trend: { date: string; amount: number }[]
+}
+
+export interface PerformanceStats {
+  total_orders: number
+  shipped_orders: number
+  pending_orders: number
+  ship_rate: number
+  total_shipments: number
+  shipped_shipments: number
+  avg_ship_hours: number | null
+  alert_products: number
+}
+
+export interface FinanceReconciliation {
+  days: number
+  payable: { name: string; amount: number }[]
+  receivable: { name: string; amount: number }[]
+  total_payable: number
+  total_receivable: number
+  net_cash_gap: number
+}
+
 // ---------- 看板 ----------
 export interface DashboardStats {
   total_products: number

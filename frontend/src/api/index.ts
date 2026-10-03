@@ -5,16 +5,26 @@
 import request from '@/api/request'
 import type {
   AiSuggestion,
+  Batch,
+  CeoDashboard,
   ChatMessageOut,
   Conversation,
   DashboardStats,
+  FinanceReconciliation,
   InventoryLog,
   InventorySummary,
   PagedData,
+  PerformanceStats,
+  PlatformOrder,
   Product,
   Profile,
+  PurchaseOrder,
+  Shipment,
   Shop,
   SkuMapping,
+  Stocktaking,
+  Supplier,
+  WarehouseLocation,
 } from '@/types'
 
 // ---------- 认证 ----------
@@ -46,6 +56,87 @@ export const authApi = {
   /** 更新个人信息（当前仅邮箱可改） */
   updateMe: (payload: { email: string }) =>
     request.put<Profile>('/auth/me', payload),
+}
+
+// ---------- 采购（ERP） ----------
+export const procurementApi = {
+  listSuppliers: () =>
+    request.get<{ items: Supplier[]; total: number }>('/suppliers'),
+  createSupplier: (payload: { name: string; contact?: string; phone?: string; email?: string }) =>
+    request.post('/suppliers', payload),
+  updateSupplier: (id: string, payload: Partial<Supplier>) =>
+    request.put(`/suppliers/${id}`, payload),
+
+  listPos: (params?: { status?: string; page?: number; page_size?: number }) =>
+    request.get<PagedData<PurchaseOrder>>('/purchase-orders', { params }),
+  getPo: (id: string) => request.get<PurchaseOrder>(`/purchase-orders/${id}`),
+  createPo: (payload: {
+    supplier_id: string
+    expected_date?: string
+    remark?: string
+    items: { product_id: string; quantity: number; unit_price: number }[]
+  }) => request.post<{ id: string; po_no: string; status: string }>('/purchase-orders', payload),
+  updatePo: (id: string, payload: object) => request.put(`/purchase-orders/${id}`, payload),
+  submitPo: (id: string) => request.post(`/purchase-orders/${id}/submit`),
+  cancelPo: (id: string) => request.post(`/purchase-orders/${id}/cancel`),
+  /** 分批收货：收货行 = 明细 ID + 实收量 + 上架库位（可空） */
+  receive: (id: string, items: { item_id: string; quantity: number; location_id?: string }[]) =>
+    request.post<{ id: string; po_no: string; status: string }>(`/purchase-orders/${id}/receive`, { items }),
+}
+
+// ---------- 仓库（ERP） ----------
+export const warehouseApi = {
+  listBatches: () => request.get<{ items: Batch[]; total: number }>('/warehouse/batches'),
+  listLocations: () => request.get<{ items: WarehouseLocation[]; total: number }>('/warehouse/locations'),
+  createLocation: (payload: { code: string; name?: string; remark?: string }) =>
+    request.post('/warehouse/locations', payload),
+  listStocktakings: () =>
+    request.get<{ items: Stocktaking[]; total: number }>('/warehouse/stocktakings'),
+  createStocktaking: () => request.post('/warehouse/stocktakings'),
+  getStocktaking: (id: string) => request.get<Stocktaking>(`/warehouse/stocktakings/${id}`),
+  /** 提交盘点：按差异写 check 流水（账实分离） */
+  completeStocktaking: (id: string) => request.post(`/warehouse/stocktakings/${id}/complete`),
+}
+
+// ---------- 订单（ERP） ----------
+export const orderApi = {
+  list: (params?: { status?: string; page?: number; page_size?: number }) =>
+    request.get<PagedData<PlatformOrder>>('/orders', { params }),
+  fetch: (payload: { shop_id: string; limit?: number }) =>
+    request.post<{ fetched: number; skipped: number; shop: string }>('/orders/fetch', payload),
+  split: (payload: { order_id?: string }) =>
+    request.post<{ split: number; skipped: number }>('/orders/split', payload),
+  listShipments: (params?: { status?: string; page?: number; page_size?: number }) =>
+    request.get<PagedData<Shipment>>('/shipments', { params }),
+  ship: (id: string, payload: { tracking_no: string; carrier?: string }) =>
+    request.post<{ id: string; status: string; tracking_no: string }>(`/shipments/${id}/ship`, payload),
+}
+
+// ---------- 报表（ERP） ----------
+export const reportApi = {
+  ceo: (params?: { days?: number }) => request.get<CeoDashboard>('/reports/ceo', { params }),
+  performance: () => request.get<PerformanceStats>('/reports/performance'),
+  finance: (params?: { days?: number }) =>
+    request.get<FinanceReconciliation>('/reports/finance', { params }),
+}
+
+// ---------- Agent 工作流 + 知识库（ERP AI 进阶） ----------
+export const agentApi = {
+  listRules: () =>
+    request.get<{ items: { id: string; title: string; content: string; created_at: string }[]; total: number }>(
+      '/ai/rules'
+    ),
+  createRule: (payload: { title: string; content: string }) =>
+    request.post('/ai/rules', payload),
+  updateRule: (id: string, payload: { title: string; content: string }) =>
+    request.put(`/ai/rules/${id}`, payload),
+  deleteRule: (id: string) => request.delete(`/ai/rules/${id}`),
+  /** 单条补货建议 → 采购单草稿 */
+  suggestionToPo: (suggestionId: string, supplierId: string) =>
+    request.post<{ id: string; po_no: string; status: string }>(
+      `/ai/suggestions/${suggestionId}/to-purchase-order`,
+      { supplier_id: supplierId }
+    ),
 }
 
 // ---------- 店铺 ----------
