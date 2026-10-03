@@ -139,7 +139,8 @@ async def main() -> None:
                     order = Order(
                         shop_id=shop.id,
                         platform_order_no=f"ORD-{sku_prefix}-{date_str}-{seq + 1:03d}",
-                        status=random.choice(["pending", "shipped", "done", "done"]),
+                        # 演示数据统一标 legacy：订单管理页只展示 ERP 拉单流程的真实订单
+                        status="legacy",
                         amount=_random_amount(),
                         created_at=day.replace(
                             hour=random.randint(8, 22),
