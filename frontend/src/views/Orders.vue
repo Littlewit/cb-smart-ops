@@ -172,7 +172,7 @@ async function shopsApiList(): Promise<Shop[]> {
 /** 商品列表（发货单商品名展示用） */
 async function productsApiList() {
   const { productsApi } = await import('@/api')
-  const data = await productsApi.list({ page: 1, page_size: 200 })
+  const data = await productsApi.list({ page: 1, page_size: 100 })
   return data.items.map((p) => ({ id: p.id, sku: p.sku, name: p.name }))
 }
 

@@ -100,11 +100,18 @@
             </template>
           </el-table-column>
         </el-table>
-        <div v-if="canReceive && (detail.status === 'submitted' || detail.status === 'receiving')"
-             style="margin-top: 14px; text-align: right">
-          <el-button type="primary" :loading="receiving" @click="onReceive">确认收货入库</el-button>
+        <div style="margin-top: 14px; text-align: right">
+          <!-- 草稿：先提交锁定；已提交/收货中：收货入库 -->
+          <el-button
+            v-if="canWrite && detail.status === 'draft'"
+            type="warning" :loading="submitting" @click="onSubmitPo"
+          >提交采购单</el-button>
+          <el-button
+            v-if="canWrite && (detail.status === 'submitted' || detail.status === 'receiving')"
+            type="primary" :loading="receiving" @click="onReceive"
+          >确认收货入库</el-button>
         </div>
-        <p v-if="detail.status === 'draft'" class="hint">草稿状态：可在列表行展开后先提交采购单再收货。</p>
+        <p v-if="detail.status === 'cancelled'" class="hint">该采购单已撤销。</p>
       </template>
     </el-drawer>
 
@@ -165,7 +172,8 @@ import { useAuthStore } from '@/stores/auth'
 import type { PurchaseOrder, PurchaseOrderItem, Supplier } from '@/types'
 
 const auth = useAuthStore()
-const canReceive = computed(() => ['admin', 'operator'].includes(auth.role))
+const canWrite = computed(() => ['admin', 'operator'].includes(auth.role))
+const canReceive = canWrite
 
 // 状态 → 文案/Tag 颜色（与后端状态机一一对应）
 const PO_STATUS_LABELS: Record<string, string> = {
@@ -200,7 +208,7 @@ async function loadAll(): Promise<void> {
 
 /** 商品列表（供应商/采购单选择用）——复用商品分页接口 */
 async function productsApiList() {
-  const data = await productsApi.list({ page: 1, page_size: 200 })
+  const data = await productsApi.list({ page: 1, page_size: 100 })
   return data.items.map((p) => ({ id: p.id, sku: p.sku, name: p.name }))
 }
 
@@ -244,6 +252,20 @@ async function onReceive(): Promise<void> {
   }
 }
 const receiving = ref(false)
+const submitting = ref(false)
+
+async function onSubmitPo(): Promise<void> {
+  if (!detail.value) return
+  submitting.value = true
+  try {
+    await procurementApi.submitPo(detail.value.id)
+    ElMessage.success('采购单已提交，明细已锁定')
+    detail.value = await procurementApi.getPo(detail.value.id)
+    loadPos()
+  } finally {
+    submitting.value = false
+  }
+}
 
 // ---------- 新建采购单 ----------
 const poDialogVisible = ref(false)

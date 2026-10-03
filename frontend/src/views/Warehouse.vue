@@ -128,7 +128,7 @@ async function loadAll(): Promise<void> {
     warehouseApi.listBatches(),
     warehouseApi.listLocations(),
     warehouseApi.listStocktakings(),
-    productsApi.list({ page: 1, page_size: 200 }),
+    productsApi.list({ page: 1, page_size: 100 }),
   ])
   batches.value = b.items
   locations.value = l.items
