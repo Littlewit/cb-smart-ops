@@ -33,6 +33,20 @@
             <el-icon><ChatDotRound /></el-icon><span>AI 助手</span>
           </el-menu-item>
         </el-menu-item-group>
+        <el-menu-item-group title="ERP">
+          <el-menu-item index="/procurement">
+            <el-icon><ShoppingCart /></el-icon><span>采购管理</span>
+          </el-menu-item>
+          <el-menu-item index="/warehouse">
+            <el-icon><House /></el-icon><span>仓库管理</span>
+          </el-menu-item>
+          <el-menu-item index="/orders">
+            <el-icon><List /></el-icon><span>订单管理</span>
+          </el-menu-item>
+          <el-menu-item index="/reports">
+            <el-icon><PieChart /></el-icon><span>报表中心</span>
+          </el-menu-item>
+        </el-menu-item-group>
       </el-menu>
     </el-aside>
 

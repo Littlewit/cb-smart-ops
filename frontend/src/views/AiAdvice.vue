@@ -46,14 +46,38 @@
       </div>
     </el-card>
 
-    <!-- 右侧：AI 建议卡片流 -->
+    <!-- 右侧：Agent 工作流 + AI 建议卡片流 -->
     <el-card class="suggestion-card" shadow="never">
       <template #header>
         <div class="sug-header">
-          <span>AI 建议（{{ suggestions.length }}）</span>
-          <el-button size="small" type="primary" @click="genVisible = true">生成建议</el-button>
+          <span>Agent 工作流</span>
+          <el-button size="small" type="warning" :loading="agentRunning" :disabled="streaming" @click="onRunAgent">
+            生成补货采购计划
+          </el-button>
         </div>
       </template>
+      <!-- Agent 步骤时间线：SSE 逐步点亮（scan→calc→group→po→done） -->
+      <el-timeline v-if="agentSteps.length" style="padding-left: 4px">
+        <el-timeline-item
+          v-for="(s, i) in agentSteps" :key="i"
+          :type="i === agentSteps.length - 1 && !agentRunning ? 'success' : 'primary'"
+          :timestamp="s.step"
+        >
+          {{ s.detail }}
+        </el-timeline-item>
+      </el-timeline>
+      <div v-if="agentPoLink" class="agent-po-link">
+        采购单 <b>{{ agentPoLink.po_no }}</b> 已生成，
+        <router-link to="/procurement">去采购管理处理 →</router-link>
+      </div>
+      <el-divider style="margin: 14px 0" />
+      <div class="sug-header" style="margin-bottom: 10px">
+        <span>AI 建议（{{ suggestions.length }}）</span>
+        <div style="display: flex; gap: 6px">
+          <el-button size="small" @click="kbVisible = true">知识库</el-button>
+          <el-button size="small" type="primary" @click="genVisible = true">生成建议</el-button>
+        </div>
+      </div>
       <el-empty v-if="!suggestions.length" description="暂无建议，点击右上角生成" />
       <div v-for="s in suggestions" :key="s.id" class="sug-item">
         <div class="sug-title">
@@ -80,8 +104,35 @@
         <!-- 优先展示规则标题（UUID 对运营者无可读性），旧数据降级为条数 -->
         <p class="sug-refs" v-if="s.rule_titles?.length">引用规则：{{ s.rule_titles.join('、') }}</p>
         <p class="sug-refs" v-else-if="s.rule_refs?.length">引用规则：{{ s.rule_refs.length }} 条</p>
+        <!-- 补货建议一键转采购单（ERP 业务闭环入口） -->
+        <el-button
+          v-if="s.type === 'restock' && s.content.quantity && canWrite"
+          size="small" type="warning" plain style="margin-top: 8px"
+          :loading="convertingId === s.id"
+          @click="onSuggestToPo(s)"
+        >转采购单</el-button>
       </div>
     </el-card>
+
+    <!-- 知识库管理弹窗：RAG 规则 CRUD -->
+    <el-dialog v-model="kbVisible" title="运营规则知识库（RAG 数据源）" width="640px">
+      <div style="display: flex; gap: 8px; margin-bottom: 12px">
+        <el-input v-model="kbForm.title" placeholder="规则标题" style="width: 200px" size="small" />
+        <el-input v-model="kbForm.content" placeholder="规则内容" style="flex: 1" size="small" />
+        <el-button type="primary" size="small" @click="onSaveRule">保存</el-button>
+      </div>
+      <el-table :data="rules" size="small" max-height="320">
+        <el-table-column prop="title" label="标题" width="180" />
+        <el-table-column prop="content" label="内容" min-width="240" show-overflow-tooltip />
+        <el-table-column label="操作" width="120" align="center">
+          <template #default="{ row }">
+            <el-button size="small" @click="onEditRule(row)">编辑</el-button>
+            <el-button size="small" type="danger" plain @click="onDeleteRule(row)">删</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <p class="hint">规则变更立即生效于 RAG 检索（AI 建议/对话即时引用新规则）。</p>
+    </el-dialog>
 
     <!-- 生成建议 dialog：选商品 + 类型 -->
     <el-dialog v-model="genVisible" title="生成 AI 建议" width="420px">
@@ -107,11 +158,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { aiApi, productsApi } from '@/api'
+import { aiApi, agentApi, productsApi, procurementApi } from '@/api'
 import { renderMarkdown } from '@/utils/markdown'
-import type { AiSuggestion, ChatMessageOut, Conversation, Product } from '@/types'
+import { useAuthStore } from '@/stores/auth'
+import type { AiSuggestion, ChatMessageOut, Conversation, Product, Supplier } from '@/types'
+
+const auth = useAuthStore()
 
 // ---------- 对话（SSE 流式） ----------
 interface ChatMessage {
@@ -119,6 +174,9 @@ interface ChatMessage {
   text: string
   streaming?: boolean
 }
+
+const router = useRouter()
+const canWrite = computed(() => ['admin', 'operator'].includes(auth?.role ?? 'viewer'))
 
 const WELCOME = '你好！我是 AI 运营助手，可以询问库存、补货、定价问题。'
 const messages = ref<ChatMessage[]>([{ role: 'ai', text: WELCOME }])
@@ -292,6 +350,124 @@ async function onGenerate(): Promise<void> {
   }
 }
 
+// ---------- Agent 工作流（SSE 步骤时间线） ----------
+interface AgentStep {
+  step: string
+  detail: string
+}
+const agentSteps = ref<AgentStep[]>([])
+const agentRunning = ref(false)
+const agentPoLink = ref<{ po_id: string; po_no: string } | null>(null)
+
+/** 运行 Agent 补货计划：fetch+ReadableStream 解析 step 帧（复用 chat 的 SSE 解析思路） */
+async function onRunAgent(): Promise<void> {
+  if (agentRunning.value || streaming.value) return
+  agentRunning.value = true
+  agentSteps.value = []
+  agentPoLink.value = null
+  try {
+    const { useAuthStore } = await import('@/stores/auth')
+    const authStore = useAuthStore()
+    const resp = await fetch('/api/ai/agent/restock-plan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({}),
+    })
+    if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`)
+
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() as string
+      for (const part of parts) {
+        if (!part.startsWith('data: ') || part.includes('[DONE]')) continue
+        const payload = JSON.parse(part.slice(6))
+        if (payload.step) agentSteps.value.push({ step: payload.step, detail: payload.detail })
+        if (payload.delta) agentPoLink.value = JSON.parse(payload.delta)
+      }
+    }
+    ElMessage.success('Agent 工作流执行完成')
+  } catch (e) {
+    ElMessage.error(`Agent 执行失败：${(e as Error).message}`)
+  } finally {
+    agentRunning.value = false
+  }
+}
+
+// ---------- 建议转采购单（ERP 业务闭环入口） ----------
+const convertingId = ref<string | null>(null)
+
+async function onSuggestToPo(s: SuggestionView): Promise<void> {
+  const active = suppliersForPo.value[0]
+  if (!active) {
+    ElMessage.warning('请先到采购管理页创建供应商')
+    return
+  }
+  convertingId.value = s.id
+  try {
+    const po = await agentApi.suggestionToPo(s.id, active.id)
+    ElMessage.success(`采购单 ${po.po_no} 已生成（草稿），请到采购管理页提交`)
+    router.push('/procurement')
+  } finally {
+    convertingId.value = null
+  }
+}
+
+const suppliersForPo = ref<Supplier[]>([])
+
+// ---------- 知识库管理（RAG 数据源 CRUD） ----------
+const kbVisible = ref(false)
+const rules = ref<{ id: string; title: string; content: string }[]>([])
+const kbForm = reactive({ title: '', content: '' })
+const editingRuleId = ref<string | null>(null)
+
+async function loadRules(): Promise<void> {
+  const data = await agentApi.listRules()
+  rules.value = data.items
+}
+
+function onEditRule(row: { id: string; title: string; content: string }): void {
+  editingRuleId.value = row.id
+  kbForm.title = row.title
+  kbForm.content = row.content
+}
+
+async function onSaveRule(): Promise<void> {
+  if (!kbForm.title.trim() || !kbForm.content.trim()) {
+    ElMessage.warning('标题与内容均不能为空')
+    return
+  }
+  if (editingRuleId.value) {
+    await agentApi.updateRule(editingRuleId.value, { ...kbForm })
+    ElMessage.success('规则已更新（RAG 检索即时生效）')
+  } else {
+    await agentApi.createRule({ ...kbForm })
+    ElMessage.success('规则已新增')
+  }
+  editingRuleId.value = null
+  kbForm.title = ''
+  kbForm.content = ''
+  loadRules()
+}
+
+async function onDeleteRule(row: { id: string; title: string }): Promise<void> {
+  await agentApi.deleteRule(row.id)
+  ElMessage.success('规则已删除')
+  loadRules()
+}
+
+watch(kbVisible, (v) => {
+  if (v) loadRules()
+})
+
 // onMounted 回调需返回 void，异步逻辑收敛到 async 函数内
 onMounted(() => {
   loadSuggestions()
@@ -300,6 +476,11 @@ onMounted(() => {
     const data = await productsApi.list({ page: 1, page_size: 100 })
     products.value = data.items
     if (data.items.length) genForm.product_id = data.items[0].id
+  })()
+  void (async () => {
+    // 转采购单需要供应商：取第一个启用供应商（多供应商分组为 P1）
+    const sup = await procurementApi.listSuppliers()
+    suppliersForPo.value = sup.items.filter((s) => s.status === 'active')
   })()
 })
 </script>

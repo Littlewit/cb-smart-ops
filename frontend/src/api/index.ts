@@ -92,10 +92,20 @@ export const warehouseApi = {
     request.post('/warehouse/locations', payload),
   listStocktakings: () =>
     request.get<{ items: Stocktaking[]; total: number }>('/warehouse/stocktakings'),
-  createStocktaking: () => request.post('/warehouse/stocktakings'),
+  createStocktaking: () =>
+    request.post<{ id: string; status: string; item_count: number }>('/warehouse/stocktakings'),
   getStocktaking: (id: string) => request.get<Stocktaking>(`/warehouse/stocktakings/${id}`),
+  /** 录入实盘数（仅盘点中状态） */
+  updateCounted: (stocktakingId: string, itemId: string, counted_qty: number) =>
+    request.put<{ id: string; counted_qty: number; diff_qty: number }>(
+      `/warehouse/stocktakings/${stocktakingId}/items/${itemId}`,
+      { counted_qty }
+    ),
   /** 提交盘点：按差异写 check 流水（账实分离） */
-  completeStocktaking: (id: string) => request.post(`/warehouse/stocktakings/${id}/complete`),
+  completeStocktaking: (id: string) =>
+    request.post<{ id: string; status: string; adjusted_count: number }>(
+      `/warehouse/stocktakings/${id}/complete`
+    ),
 }
 
 // ---------- 订单（ERP） ----------

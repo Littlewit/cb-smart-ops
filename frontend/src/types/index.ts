@@ -158,6 +158,10 @@ export interface Batch {
   location_id: string | null
   qty_initial: number
   qty_remaining: number
+  // 列表接口 join 的展示字段
+  product_sku: string
+  location_code: string | null
+  created_at: string
   location?: WarehouseLocation | null
   product?: Product | null
 }
