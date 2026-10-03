@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
-from app.routers import ai, auth, dashboard, health, inventory, products, shops
+from app.routers import ai, auth, dashboard, health, inventory, products, purchase, shops
 
 
 @asynccontextmanager
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
     app.include_router(inventory.router)
     app.include_router(ai.router)
     app.include_router(dashboard.router)
+    app.include_router(purchase.router)
     return app
 
 
