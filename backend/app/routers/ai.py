@@ -13,13 +13,23 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
+
+class RuleUpsert(BaseModel):
+    """规则知识库新增/更新请求。"""
+
+    title: str = Field(min_length=1, max_length=255)
+    content: str = Field(min_length=1)
+
 from app.ai import chains, llm, prompts, rag
 from app.core.database import get_db
 from app.core.deps import require_role
 from app.core.response import ok
 from app.models import AiSuggestion, User
 from app.schemas.ai import AdviceRequest, ChatRequest
-from app.services import conversation_service, product_service
+from app.services import agent_service, conversation_service, product_service, rule_service
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
@@ -232,3 +242,105 @@ async def delete_conversation(
     await conversation_service.delete_conversation(db, conversation_id)
     await db.commit()
     return ok({"id": conversation_id, "deleted": True})
+
+
+# ---------- Agent 工作流 + 知识库管理（ERP 扩展） ----------
+
+
+class AgentPlanRequest(BaseModel):
+    """Agent 补货计划请求：供应商缺省取第一个启用供应商。"""
+
+    supplier_id: str | None = Field(default=None, description="指定供应商；缺省自动选择")
+
+
+class SuggestionToPoRequest(BaseModel):
+    """建议转采购单请求。"""
+
+    supplier_id: str = Field(min_length=1)
+
+
+@router.post("/agent/restock-plan")
+async def agent_restock_plan(
+    payload: AgentPlanRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("operator")),
+):
+    """Agent 补货计划工作流（SSE）：预警扫描 → LLM 补货量 → 生成采购单草稿。
+
+    帧格式：data: {"step": key, "detail": ...}（工作流时间线）+
+    结束前 data: {"delta": "{\"po_id\"...}"}（生成结果，前端跳转采购详情）。
+    """
+    return StreamingResponse(
+        agent_service.run_restock_plan(db, user.id, payload.supplier_id),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/suggestions/{suggestion_id}/to-purchase-order")
+async def suggestion_to_po(
+    suggestion_id: str,
+    payload: SuggestionToPoRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("operator")),
+):
+    """单条补货建议转采购单草稿（建议卡片"转采购单"按钮）。"""
+    po = await agent_service.suggestion_to_purchase_order(
+        db, suggestion_id, payload.supplier_id, user.id
+    )
+    return ok({"id": po.id, "po_no": po.po_no, "status": po.status})
+
+
+# ---------- 运营规则知识库管理（RAG 数据源） ----------
+
+
+@router.get("/rules")
+async def list_rules(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_role("viewer")),
+):
+    """规则知识库列表。"""
+    items = await rule_service.list_rules(db)
+    return ok(
+        {
+            "items": [
+                {"id": r.id, "title": r.title, "content": r.content, "created_at": r.created_at.isoformat()}
+                for r in items
+            ],
+            "total": len(items),
+        }
+    )
+
+
+@router.post("/rules", status_code=201)
+async def create_rule(
+    payload: RuleUpsert,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_role("operator")),
+):
+    """新增运营规则（立即生效于 RAG 检索）。"""
+    rule = await rule_service.create_rule(db, payload.title, payload.content)
+    return ok({"id": rule.id, "title": rule.title})
+
+
+@router.put("/rules/{rule_id}")
+async def update_rule(
+    rule_id: str,
+    payload: RuleUpsert,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_role("operator")),
+):
+    """更新运营规则。"""
+    rule = await rule_service.update_rule(db, rule_id, payload.title, payload.content)
+    return ok({"id": rule.id, "title": rule.title})
+
+
+@router.delete("/rules/{rule_id}")
+async def delete_rule(
+    rule_id: str,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_role("operator")),
+):
+    """删除运营规则。"""
+    await rule_service.delete_rule(db, rule_id)
+    return ok({"id": rule_id, "deleted": True})
