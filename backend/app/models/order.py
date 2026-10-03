@@ -1,7 +1,7 @@
 from typing import Optional
 
 from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.base import BaseMixin
@@ -39,3 +39,8 @@ class Order(BaseMixin, Base):
     receiver_address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     # 全部发货完成时间（报表"发货时效"计算依据）
     shipped_at: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+
+    # 订单明细（拉单时快照落库；selectinload 预加载使用）
+    items: Mapped[list["OrderItem"]] = relationship(
+        cascade="all, delete-orphan", order_by="OrderItem.created_at"
+    )
