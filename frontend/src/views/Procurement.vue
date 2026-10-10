@@ -117,7 +117,7 @@
 
     <!-- 新建采购单弹窗 -->
     <el-dialog v-model="poDialogVisible" title="新建采购单" width="560px">
-      <el-form label-width="90px">
+      <el-form label-width="90px" style="margin-top: 20px;">
         <el-form-item label="供应商">
           <el-select v-model="poForm.supplier_id" style="width: 100%" placeholder="选择启用中的供应商">
             <el-option v-for="s in activeSuppliers" :key="s.id" :label="s.name" :value="s.id" />
@@ -150,7 +150,7 @@
 
     <!-- 供应商弹窗 -->
     <el-dialog v-model="supplierDialogVisible" :title="editingSupplier ? '编辑供应商' : '新增供应商'" width="440px">
-      <el-form label-width="70px">
+      <el-form label-width="70px" style="margin-top: 20px;">
         <el-form-item label="名称"><el-input v-model="supplierForm.name" /></el-form-item>
         <el-form-item label="联系人"><el-input v-model="supplierForm.contact" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="supplierForm.phone" /></el-form-item>
