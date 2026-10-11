@@ -12,7 +12,7 @@
         <el-button type="warning" size="small" :loading="splitting" @click="onSplit">
           一键拆单（全部待拆）
         </el-button>
-        <el-select v-model="statusFilter" size="small" style="width: 130px" @change="loadAll">
+        <el-select v-model="statusFilter" size="small" style="width: 130px" @change="onFilterChange">
           <el-option label="全部状态" value="" />
           <el-option label="待拆单" value="pending" />
           <el-option label="待发货" value="partial" />
@@ -21,83 +21,111 @@
       </div>
     </el-card>
 
-    <!-- 订单列表 -->
-    <el-card shadow="never" style="margin-top: 16px">
-      <template #header><span>平台订单（{{ total }}）</span></template>
-      <el-table :data="orders" size="small">
-        <el-table-column prop="platform_order_no" label="平台单号" width="190" />
-        <el-table-column label="平台" width="90" align="center">
-          <template #default="{ row }: { row: PlatformOrder }">
-            <el-tag size="small" effect="plain">{{ row.platform }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
-          <template #default="{ row }: { row: PlatformOrder }">
-            <el-tag size="small" :type="ORDER_TAG[row.status] ?? 'info'">
-              {{ ORDER_LABEL[row.status] ?? row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="商品明细" min-width="200">
-          <template #default="{ row }: { row: PlatformOrder }">
-            <span v-for="(it, i) in row.items" :key="it.id">
-              {{ i > 0 ? '、' : '' }}{{ it.platform_sku }}×{{ it.quantity }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="金额" width="100" align="right">
-          <template #default="{ row }: { row: PlatformOrder }">￥{{ row.amount.toFixed(2) }}</template>
-        </el-table-column>
-        <el-table-column label="收货人" min-width="160">
-          <template #default="{ row }: { row: PlatformOrder }">
-            {{ row.receiver_name }} {{ row.receiver_phone }}
-            <div class="addr">{{ row.receiver_address }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="下单时间" width="160">
-          <template #default="{ row }: { row: PlatformOrder }">
-            {{ row.created_at.replace('T', ' ').slice(0, 16) }}
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <!-- 列表区：页签切换「平台订单 / 发货单」，避免两个长表格堆叠撑长页面 -->
+    <el-card shadow="never" class="list-card">
+      <el-tabs v-model="activeTab">
+        <!-- 页签一：平台订单 -->
+        <el-tab-pane name="orders">
+          <template #label>平台订单（{{ orderTotal }}）</template>
+          <!-- max-height 让表格内部滚动、表头固定，页面本身不再出现长滚动条 -->
+          <el-table :data="orders" size="small" class="table-scroll">
+            <el-table-column prop="platform_order_no" label="平台单号" width="190" />
+            <el-table-column label="平台" width="90" align="center">
+              <template #default="{ row }: { row: PlatformOrder }">
+                <el-tag size="small" effect="plain">{{ row.platform }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="100" align="center">
+              <template #default="{ row }: { row: PlatformOrder }">
+                <el-tag size="small" :type="ORDER_TAG[row.status] ?? 'info'">
+                  {{ ORDER_LABEL[row.status] ?? row.status }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="商品明细" min-width="200">
+              <template #default="{ row }: { row: PlatformOrder }">
+                <span v-for="(it, i) in row.items" :key="it.id">
+                  {{ i > 0 ? '、' : '' }}{{ it.platform_sku }}×{{ it.quantity }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="金额" width="100" align="right">
+              <template #default="{ row }: { row: PlatformOrder }">￥{{ row.amount.toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column label="收货人" min-width="160">
+              <template #default="{ row }: { row: PlatformOrder }">
+                {{ row.receiver_name }} {{ row.receiver_phone }}
+                <div class="addr">{{ row.receiver_address }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="下单时间" width="160">
+              <template #default="{ row }: { row: PlatformOrder }">
+                {{ row.created_at.replace('T', ' ').slice(0, 16) }}
+              </template>
+            </el-table-column>
+          </el-table>
+          <!-- 订单分页：服务端分页，避免一次性渲染过多行 -->
+          <div class="pager">
+            <el-pagination
+              v-model:current-page="orderPage"
+              :total="orderTotal"
+              :page-size="PAGE_SIZE"
+              layout="total, prev, pager, next"
+              background
+              @current-change="loadOrders"
+            />
+          </div>
+        </el-tab-pane>
 
-    <!-- 发货单列表 -->
-    <el-card shadow="never" style="margin-top: 16px">
-      <template #header><span>发货单（{{ shipments.length }}）</span></template>
-      <el-table :data="shipments" size="small">
-        <el-table-column prop="platform_order_no" label="平台单号" width="190" />
-        <el-table-column label="状态" width="100" align="center">
-          <template #default="{ row }: { row: Shipment }">
-            <el-tag size="small" :type="row.status === 'shipped' ? 'success' : 'warning'">
-              {{ row.status === 'shipped' ? '已发货' : '待发货' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="商品" min-width="160">
-          <template #default="{ row }: { row: Shipment }">
-            {{ row.items.map((it) => `${productName(it.product_id)}×${it.quantity}`).join('、') }}
-          </template>
-        </el-table-column>
-        <el-table-column label="物流" min-width="170">
-          <template #default="{ row }: { row: Shipment }">
-            {{ row.tracking_no ? `${row.carrier ?? ''} ${row.tracking_no}` : '—' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="shipped_at" label="发货时间" width="160">
-          <template #default="{ row }: { row: Shipment }">
-            {{ row.shipped_at?.replace('T', ' ').slice(0, 16) || '—' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="110" align="center">
-          <template #default="{ row }: { row: Shipment }">
-            <el-button
-              v-if="row.status === 'waiting' && canWrite"
-              size="small" type="primary" @click="openShipDialog(row)"
-            >发货</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+        <!-- 页签二：发货单 -->
+        <el-tab-pane name="shipments">
+          <template #label>发货单（{{ shipmentTotal }}）</template>
+          <el-table :data="shipments" size="small" class="table-scroll">
+            <el-table-column prop="platform_order_no" label="平台单号" width="190" />
+            <el-table-column label="状态" width="100" align="center">
+              <template #default="{ row }: { row: Shipment }">
+                <el-tag size="small" :type="row.status === 'shipped' ? 'success' : 'warning'">
+                  {{ row.status === 'shipped' ? '已发货' : '待发货' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="商品" min-width="160">
+              <template #default="{ row }: { row: Shipment }">
+                {{ row.items.map((it) => `${productName(it.product_id)}×${it.quantity}`).join('、') }}
+              </template>
+            </el-table-column>
+            <el-table-column label="物流" min-width="170">
+              <template #default="{ row }: { row: Shipment }">
+                {{ row.tracking_no ? `${row.carrier ?? ''} ${row.tracking_no}` : '—' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="shipped_at" label="发货时间" width="160">
+              <template #default="{ row }: { row: Shipment }">
+                {{ row.shipped_at?.replace('T', ' ').slice(0, 16) || '—' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="110" align="center">
+              <template #default="{ row }: { row: Shipment }">
+                <el-button
+                  v-if="row.status === 'waiting' && canWrite"
+                  size="small" type="primary" @click="openShipDialog(row)"
+                >发货</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <!-- 发货单分页 -->
+          <div class="pager">
+            <el-pagination
+              v-model:current-page="shipmentPage"
+              :total="shipmentTotal"
+              :page-size="PAGE_SIZE"
+              layout="total, prev, pager, next"
+              background
+              @current-change="loadShipments"
+            />
+          </div>
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
 
     <!-- 发货弹窗 -->
@@ -138,10 +166,19 @@ const ORDER_TAG: Record<string, 'primary' | 'success' | 'warning' | 'info'> = {
 
 const shops = ref<Shop[]>([])
 const orders = ref<PlatformOrder[]>([])
-const total = ref(0)
+const orderTotal = ref(0)
 const shipments = ref<Shipment[]>([])
+const shipmentTotal = ref(0)
 const statusFilter = ref('')
 const fetchShopId = ref('')
+
+// ---------- 列表展示：页签 + 分页 ----------
+// 页签切换避免「订单 + 发货单」两个长表格纵向堆叠撑长页面
+const activeTab = ref<'orders' | 'shipments'>('orders')
+// 每页条数；行数多时靠分页翻页，而不是把页面拉长
+const PAGE_SIZE = 20
+const orderPage = ref(1)
+const shipmentPage = ref(1)
 
 const products = ref<{ id: string; sku: string; name: string }[]>([])
 const productName = (id: string) => {
@@ -149,18 +186,22 @@ const productName = (id: string) => {
   return p ? p.sku : id.slice(0, 8)
 }
 
-async function loadAll(): Promise<void> {
-  const [o, s, shopsData, prod] = await Promise.all([
-    orderApi.list({ status: statusFilter.value || undefined, page: 1, page_size: 50 }),
-    orderApi.listShipments({ page: 1, page_size: 50 }),
-    shopsApiList(),
-    productsApiList(),
-  ])
+/** 加载平台订单列表（服务端分页） */
+async function loadOrders(): Promise<void> {
+  const o = await orderApi.list({
+    status: statusFilter.value || undefined,
+    page: orderPage.value,
+    page_size: PAGE_SIZE,
+  })
   orders.value = o.items
-  total.value = o.total
+  orderTotal.value = o.total
+}
+
+/** 加载发货单列表（服务端分页） */
+async function loadShipments(): Promise<void> {
+  const s = await orderApi.listShipments({ page: shipmentPage.value, page_size: PAGE_SIZE })
   shipments.value = s.items
-  shops.value = shopsData
-  products.value = prod
+  shipmentTotal.value = s.total
 }
 
 /** 店铺列表（拉单选择用） */
@@ -174,6 +215,25 @@ async function productsApiList() {
   const { productsApi } = await import('@/api')
   const data = await productsApi.list({ page: 1, page_size: 100 })
   return data.items.map((p) => ({ id: p.id, sku: p.sku, name: p.name }))
+}
+
+/** 一次性刷新所有基础数据（拉单/拆单/发货/筛选变化后调用） */
+async function loadAll(): Promise<void> {
+  // 订单、发货单、店铺、商品四路并发请求；翻页时只调 loadOrders/loadShipments 单独刷新
+  const [, , shopsData, prod] = await Promise.all([
+    loadOrders(),
+    loadShipments(),
+    shopsApiList(),
+    productsApiList(),
+  ])
+  shops.value = shopsData
+  products.value = prod
+}
+
+/** 状态筛选变化：重置回第 1 页再刷新，避免停留在超出范围的页码 */
+async function onFilterChange(): Promise<void> {
+  orderPage.value = 1
+  await loadAll()
 }
 
 // ---------- 拉单 / 拆单 ----------
@@ -242,4 +302,8 @@ onMounted(loadAll)
 .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .addr { color: #909399; font-size: 12px; }
 .hint { color: #909399; font-size: 12px; margin-top: 10px; }
+/* 表格固定最大高度：表头吸顶、表体内部滚动，页面整体不再出现长滚动条 */
+.table-scroll { max-height: calc(100vh - 330px); }
+/* 分页条：右对齐并与表格保持间距 */
+.pager { display: flex; justify-content: flex-end; margin-top: 12px; }
 </style>
