@@ -103,13 +103,15 @@ const LINE_GRADIENT = new echarts.graphic.LinearGradient(0, 0, 1, 0, [
   { offset: 1, color: '#8b5cf6' },
 ])
 
-/** 环形图多店铺色板：[起始色, 结束色] 成对渐变 */
+/** 环形图多店铺色板：[起始色, 结束色] 成对渐变。
+ *  按色相区分（indigo/青蓝/翠绿/琥珀/品红），首行保留品牌渐变，
+ *  避免同色相深浅相近导致相邻扇区难分辨。 */
 const PIE_PALETTE: [string, string][] = [
-  ['#6366f1', '#8b5cf6'],
-  ['#818cf8', '#a78bfa'],
-  ['#4f46e5', '#7c3aed'],
-  ['#38bdf8', '#818cf8'],
-  ['#8b5cf6', '#d946ef'],
+  ['#6366f1', '#8b5cf6'], // indigo → violet（品牌色，第一顺位）
+  ['#38bdf8', '#2563eb'], // sky → blue（青蓝）
+  ['#34d399', '#059669'], // emerald（翠绿）
+  ['#fbbf24', '#f59e0b'], // amber（琥珀）
+  ['#f472b6', '#db2777'], // pink（品红）
 ]
 
 /** 渲染销售趋势折线图：渐变线条 + 渐变面积 + 白描圆点。
