@@ -115,8 +115,8 @@
     </el-card>
 
     <!-- 知识库管理弹窗：RAG 规则 CRUD -->
-    <el-dialog v-model="kbVisible" title="运营规则知识库（RAG 数据源）" width="640px">
-      <div style="display: flex; gap: 8px; margin-bottom: 12px">
+    <el-dialog v-model="kbVisible" title="运营规则知识库（RAG 数据源）" width="1040px">
+      <div style="display: flex; gap: 8px;margin-top: 20px; margin-bottom: 12px">
         <el-input v-model="kbForm.title" placeholder="规则标题" style="width: 200px" size="small" />
         <el-input v-model="kbForm.content" placeholder="规则内容" style="flex: 1" size="small" />
         <el-button type="primary" size="small" @click="onSaveRule">保存</el-button>
@@ -131,7 +131,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <p class="hint">规则变更立即生效于 RAG 检索（AI 建议/对话即时引用新规则）。</p>
+      <p class="hint" style="margin-top: 10px;">规则变更立即生效于 RAG 检索（AI 建议/对话即时引用新规则）。</p>
     </el-dialog>
 
     <!-- 生成建议 dialog：选商品 + 类型 -->
