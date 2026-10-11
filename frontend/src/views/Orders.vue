@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <!-- 操作条：拉单 / 拆单 / 状态过滤 -->
-    <el-card shadow="never">
+    <el-card shadow="never" style="margin-bottom: 10px">
       <div class="toolbar">
         <el-select v-model="fetchShopId" size="small" style="width: 200px" placeholder="选择店铺">
           <el-option v-for="s in shops" :key="s.id" :label="s.name" :value="s.id" />
@@ -49,7 +49,7 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="金额" width="100" align="right">
+            <el-table-column label="金额" width="100" align="center">
               <template #default="{ row }: { row: PlatformOrder }">￥{{ row.amount.toFixed(2) }}</template>
             </el-table-column>
             <el-table-column label="收货人" min-width="160">
@@ -130,7 +130,7 @@
 
     <!-- 发货弹窗 -->
     <el-dialog v-model="shipVisible" title="发货确认" width="420px">
-      <el-form label-width="90px">
+      <el-form label-width="90px" style="margin-top: 20px">
         <el-form-item label="物流单号">
           <el-input v-model="shipForm.tracking_no" placeholder="如 SF1234567890" />
         </el-form-item>
