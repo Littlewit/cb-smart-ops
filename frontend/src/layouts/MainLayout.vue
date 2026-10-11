@@ -307,17 +307,6 @@ async function onChangePwd(): Promise<void> {
   font-weight: 400;
   box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
 }
-.menu :deep(.el-menu-item.is-active)::before {
-  content: '';
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 60%;
-  background: #ffffff;
-  border-radius: 0 4px 4px 0;
-}
 
 /* 预警数 badge：红色 pill，右对齐 */
 .menu-badge {
